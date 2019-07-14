@@ -11,15 +11,14 @@ class Card:
 		self.type_line = ""
 		self.text = ""
 
-	def __init__(self, nm, data_base=None):
-		self.name = nm
-		if data_base is None:
-			data_base = MtGCardDBHandler.LoadCardDataBase()
+	def __init__(self, nm, database=MtGCardDBHandler.LoadCardDataBase()):
+		print (f"nm - {nm}")
 		try:
-			card_data = data_base[nm]
+			card_data = database[nm]
 		except KeyError:
 			print (f"Card not found: {nm}")
 			return
+		self.name = nm
 		self.colors = card_data['colors']
 		self.convertedManaCost = int(card_data['convertedManaCost'])
 		if "names" in card_data:
@@ -41,6 +40,7 @@ class Card:
 			self.toughness = card_data["toughness"]
 		if "loyalty" in card_data:
 			self.loyalty = card_data["loyalty"]
+		print ("Card created with name: " + nm)
 
 	def __str__(self):
 		ret_val = f"{self.name}: {self.manaCost} {self.type_line} - {self.text}"
@@ -50,5 +50,5 @@ class Card:
 			ret_val += f"\nLoyalty: {self.loyalty}"
 		if hasattr(self, 'names'):
 			if self.names[0] == self.name:
-				ret_val += f"\n{self.layout.capitalize()}: {self.other_half.to_string()}"
+				ret_val += f"\n{self.layout.capitalize()}: {str(self.other_half)}"
 		return ret_val
