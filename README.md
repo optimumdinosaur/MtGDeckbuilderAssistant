@@ -2,5 +2,6 @@
 Python application to help with building decks in Magic: the Gathering
 
 
-This is a work in progress. Current version has a GUI that will display the decklist sorted by card type. You can mouseover the card names to see the rules text of each card. 
-There's also a bar graph on the right that shows Converted Mana Costs. 
+Work in progress. 
+Displays decklist, CMC graph, as well as type and color distribution for a deck. Set the number of a card in a deck with the entry box and spinbox at the bottom. This works to add new cards, remove cards, or just adjust quantities. Decklist, graphs, and distributions all update when you change a card quantity. 
+Decks can be saved to and loaded from files. The loaded file needs to have one line per card with the card quantity first, then the card name. For example, "4 Lightning Bolt"
