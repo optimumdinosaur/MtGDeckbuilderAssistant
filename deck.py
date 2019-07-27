@@ -14,11 +14,14 @@ class Deck:
 			self.BuildFromFile(filepath)
 		self.CrunchNumbers()
 
-	def CrunchNumbers(self):
-		self.CalcCMCCurve()
-		self.GetColorDistribution()
-		self.GetTypeDistribution()
-		self.GetCreatureSubtypes()
+	def CrunchNumbers(self, dataset=None):
+		if dataset is None:
+			dataset = self.mainboard
+		self.CountCards(dataset)
+		self.CalcCMCCurve(dataset)
+		self.GetColorDistribution(dataset)
+		self.GetTypeDistribution(dataset)
+		self.GetCreatureSubtypes(dataset)
 
 	def AddCard(self, Card):
 		try:
@@ -54,7 +57,8 @@ class Deck:
 				print ("Card quantity not set, name not found. ")
 
 	def to_string(self):
-		ret_val = f"Deck: {self.name}\n"
+		# ret_val = f"Deck: {self.name}\n"
+		ret_val = ""
 		for c in self.mainboard:
 			ret_val += (f"{self.mainboard[c]} {c.name}\n")
 		return ret_val
@@ -86,10 +90,20 @@ class Deck:
 				card = Card(split_line[1].strip(), self.database)
 				self.SetCardQuantity(card, int(split_line[0].strip()))
 
+	def CountCards(self, dataset=None):
+		if dataset is None:
+			dataset = self.mainboard
+		self.card_count = 0
+		for card in dataset:
+			self.card_count += self.mainboard[card]
+		return self.card_count
 
-	def CalcCMCCurve(self):
+
+	def CalcCMCCurve(self, dataset=None):
+		if dataset is None:
+			dataset=self.mainboard
 		self.CMCCurve = []
-		for card in self.mainboard:
+		for card in dataset:
 			if "Land" not in card.type_line:
 				if len(self.CMCCurve) < card.convertedManaCost+1:
 					powerpole = [0] * (card.convertedManaCost - len(self.CMCCurve) + 1)
@@ -97,26 +111,32 @@ class Deck:
 				self.CMCCurve[card.convertedManaCost] += self.mainboard[card]
 		return self.CMCCurve
 
-	def GetColorDistribution(self):
+	def GetColorDistribution(self, dataset=None):
+		if dataset is None:
+			dataset = self.mainboard
 		self.color_dist = {'W': [0, 0], 'U': [0, 0], 'B': [0, 0], 'R': [0, 0], 'G': [0, 0], 'C':[0, 0]}
 		for color in self.color_dist:
-			for card in self.mainboard:
+			for card in dataset:
 				if color in card.manaCost:
 					self.color_dist[color][0] += self.mainboard[card]
 					self.color_dist[color][1] += (card.manaCost.count(color) * self.mainboard[card])
 		return self.color_dist
 
-	def GetTypeDistribution(self):
+	def GetTypeDistribution(self, dataset=None):
+		if dataset is None:
+			dataset = self.mainboard
 		self.type_dist = {"Creature":0, "Enchantment":0, "Artifact":0, "Planeswalker":0, "Instant":0, "Sorcery":0, "Land":0}
 		for t in self.type_dist:
-			for c in self.mainboard:
+			for c in dataset:
 				if t in c.type_line:
 					self.type_dist[t] += self.mainboard[c]
 		return self.type_dist
 
-	def GetCreatureSubtypes(self):
+	def GetCreatureSubtypes(self, dataset=None):
+		if dataset is None:
+			dataset = self.mainboard
 		self.creature_subtypes = Counter()
-		for card in self.mainboard:
+		for card in dataset:
 			if "Creature" in card.type_line:
 				card_subtypes = card.type_line[card.type_line.find('—'):].split()
 				for subtype in card_subtypes:
