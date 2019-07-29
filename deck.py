@@ -148,12 +148,18 @@ class Deck:
 	# returns a list of Cards that conatain the re pattern
 	def SearchByPhrase(self, pattern, cts = None):
 		rv = []
+		print (f'Searching for phrase, "{pattern}"...')
 		if cts is None:
 			cts = self.mainboard
 		for card in cts:
 			ptrn = pattern.replace('{N}', card.name)
 			if re.search(ptrn, card.text, re.I):
+				print (f'Match found with card, {card.name}')
 				rv.append(card)
+
+		print ("*Search Return Value: *")
+		for c in rv:
+			print (c.name)
 		return rv
 
 	def SearchByType(self, pattern, cts = None):

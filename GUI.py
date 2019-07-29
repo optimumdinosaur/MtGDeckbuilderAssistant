@@ -15,8 +15,8 @@ class Manager (tk.Frame):
 		self.SetupFilterFrame()
 		if deck:
 			self.deck = deck
-			self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=5, pady=5)
-			self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse")
+			# self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=5, pady=5)
+			# self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse")
 			self.UpdateDisplay()
 		self.pack()
 		self.master.bind("<Return>", self.SetCardQty)
@@ -78,7 +78,7 @@ class Manager (tk.Frame):
 			dataset = self.deck.mainboard
 		num_cards_lbl = tk.Label(self.decklist_frame, text=f"Total Number of Cards: {self.deck.card_count}")
 
-		nc_frame = tk.Frame(self.decklist_frame)
+		nc_frame = tk.Frame(self.decklist_frame, padx=2, pady=2)
 		artifact_frame = tk.LabelFrame(nc_frame, text="Artifacts", padx=2, pady=2)
 		creature_frame = tk.LabelFrame(self.decklist_frame, text="Creatures", padx=2, pady=2)
 		ench_frame = tk.LabelFrame(nc_frame, text="Enchantments", padx=2, pady=2)
@@ -204,24 +204,37 @@ class Manager (tk.Frame):
 		print (f"Deck saved to {filename}!")
 
 	def Search(self):
+		print ("Beginning Search function...")
 		phrase = self.search_entry.get()
-		type_checks = {'Artifact' : self.artifact_cbox_var, 'Creature' : self.creature_cbox_var, 'Enchantment' : self.enchantment_cbox_var, 'Instant' : self.instant_cbox_var, 'Planeswalker' : self.planeswalker_cbox_var, 'Sorcery' : self.sorcery_cbox_var}
-		color_checks = {'W' : self.white_cbox_var, 'U' : self.blue_cbox_var, 'B' : self.black_cbox_var, 'R' : self.red_cbox_var, 'G' : self.green_cbox_var, 'C' : self.colorless_cbox_var}
-		# Do the searches
-		results = set()
-		if phrase:
-			results = set(self.deck.SearchByPhrase(phrase))
+
+		type_checks = {'Artifact' : int(self.artifact_cbox_var), 'Creature' : self.creature_cbox_var, 'Enchantment' : self.enchantment_cbox_var, 'Instant' : self.instant_cbox_var, 'Planeswalker' : self.planeswalker_cbox_var, 'Sorcery' : self.sorcery_cbox_var}
+		color_checks = {'W' : int(self.white_cbox_var), 'U' : int(self.blue_cbox_var), 'B' : self.black_cbox_var, 'R' : self.red_cbox_var, 'G' : self.green_cbox_var, 'C' : self.colorless_cbox_var}
+
+		results = set(self.deck.mainboard.keys())
+		print ("Results before any searches are ran:")
+		for c in results:
+			print (c.name)
 		
-		if any(type_checks.values()):
-			if len(results) == 0:
-				results = set(self.deck.mainboard.keys())
+		print (f"Phrase: {phrase}")
+		if phrase:
+			print ("Phrase found to be nonzero")
+			results = set(self.deck.SearchByPhrase(phrase))
+
+		if sum(type_checks.values()):
+			print ("Found one of the type cboxes to be checked")
 			in_results = results
 			results = set()
 			for t in type_checks:
+				print (f"Chcking type, {t}. typecheck[t]: {type_checks[t]}")
 				if type_checks[t]:
-					results = results.union(set(self.deck.SearchByType(t)))
+					results = in_results.union(set(self.deck.SearchByType(t)))
 
-		self.UpdateDisplay(results)
+		
+		print ("**Results after searches:**")
+		for c in results:
+			print (c.name)
+
+		self.UpdateDisplay(list(results))
 
 	def SetCardQty(self, _event=None):
 		cn = self.set_qty_entry.get()
@@ -235,10 +248,14 @@ class Manager (tk.Frame):
 	def UpdateDisplay(self, dataset=None):
 		if dataset is None:
 			dataset = self.deck.mainboard
+
+		self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=5, pady=5)
+		self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse")
+
 		for widget in self.decklist_frame.winfo_children():
 			widget.destroy()
 		self.deck.CrunchNumbers(dataset=dataset)
-		self.ShowDeckList()
+		self.ShowDeckList(dataset=dataset)
 		self.ShowCMCGraph()
 		self.ShowColorDistribution()
 		self.ShowTypeDistribution()
