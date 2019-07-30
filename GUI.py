@@ -35,7 +35,7 @@ class Manager (tk.Frame):
 
 
 	def SetupFilterFrame(self):
-		filter_frame = CollapsibleFrame(self, text="Filter Cards (this doesn't work)", interior_padx=5, interior_pady=5, width=45)
+		filter_frame = CollapsibleFrame(self, text="Filter Cards", interior_padx=5, interior_pady=5, width=45)
 		filter_frame.grid(row=0, column=2, sticky="ew", padx=2, pady=2)
 
 		tk.Label(filter_frame.interior, text="Phrase: ").grid(row=0, column=0)
@@ -207,34 +207,39 @@ class Manager (tk.Frame):
 		print ("Beginning Search function...")
 		phrase = self.search_entry.get()
 
-		type_checks = {'Artifact' : int(self.artifact_cbox_var), 'Creature' : self.creature_cbox_var, 'Enchantment' : self.enchantment_cbox_var, 'Instant' : self.instant_cbox_var, 'Planeswalker' : self.planeswalker_cbox_var, 'Sorcery' : self.sorcery_cbox_var}
-		color_checks = {'W' : int(self.white_cbox_var), 'U' : int(self.blue_cbox_var), 'B' : self.black_cbox_var, 'R' : self.red_cbox_var, 'G' : self.green_cbox_var, 'C' : self.colorless_cbox_var}
+		type_checks = {'Artifact' : self.artifact_cbox_var.get(), 'Creature' : self.creature_cbox_var.get(), 'Enchantment' : self.enchantment_cbox_var.get(), 'Instant' : self.instant_cbox_var.get(), 'Planeswalker' : self.planeswalker_cbox_var.get(), 'Sorcery' : self.sorcery_cbox_var.get()}
+		color_checks = {'W' : self.white_cbox_var.get(), 'U' : self.blue_cbox_var.get(), 'B' : self.black_cbox_var.get(), 'R' : self.red_cbox_var.get(), 'G' : self.green_cbox_var.get(), 'C' : self.colorless_cbox_var.get()}
 
-		results = set(self.deck.mainboard.keys())
-		print ("Results before any searches are ran:")
-		for c in results:
-			print (c.name)
+		final_results = set(self.deck.mainboard.keys())
 		
 		print (f"Phrase: {phrase}")
 		if phrase:
 			print ("Phrase found to be nonzero")
-			results = set(self.deck.SearchByPhrase(phrase))
+			final_results = set(self.deck.SearchByPhrase(phrase))
 
 		if sum(type_checks.values()):
 			print ("Found one of the type cboxes to be checked")
-			in_results = results
-			results = set()
+			type_results = set()
 			for t in type_checks:
-				print (f"Chcking type, {t}. typecheck[t]: {type_checks[t]}")
 				if type_checks[t]:
-					results = in_results.union(set(self.deck.SearchByType(t)))
+					res = set(self.deck.SearchByType(t))
+					type_results = type_results | res
+			final_results = final_results & type_results
 
-		
+		if sum(color_checks.values()):
+			print ("At least one Color box is checked")
+			color_results = set()
+			for c in color_checks:
+				if color_checks[c]:
+					res = set(self.deck.SearchByColor(c))
+					color_results = color_results | res
+			final_results = final_results & color_results
+
 		print ("**Results after searches:**")
-		for c in results:
+		for c in final_results:
 			print (c.name)
 
-		self.UpdateDisplay(list(results))
+		self.UpdateDisplay(list(final_results))
 
 	def SetCardQty(self, _event=None):
 		cn = self.set_qty_entry.get()
@@ -252,8 +257,9 @@ class Manager (tk.Frame):
 		self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=5, pady=5)
 		self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse")
 
-		for widget in self.decklist_frame.winfo_children():
-			widget.destroy()
+		# for widget in self.decklist_frame.winfo_children():
+		# 	widget.destroy()
+
 		self.deck.CrunchNumbers(dataset=dataset)
 		self.ShowDeckList(dataset=dataset)
 		self.ShowCMCGraph()
@@ -264,8 +270,8 @@ class Manager (tk.Frame):
 
 
 db = MtGCardDBHandler.LoadCardDataBase()
-# d = Deck(filepath='rw-manabarbs.txt', database=db)
-d = Deck()
+d = Deck(filepath='rw-manabarbs.txt', database=db)
+# d = Deck()
 r = tk.Tk()
 r.title("MtG DeckBuilding Assistant")
 manager = Manager(master=r, deck=d, database=db)

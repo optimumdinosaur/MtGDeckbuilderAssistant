@@ -163,11 +163,24 @@ class Deck:
 		return rv
 
 	def SearchByType(self, pattern, cts = None):
+		print (f"Searching for pattern, {pattern}...")
 		rv = []
 		if cts is None:
 			cts = self.mainboard
 		for card in cts:
 			if pattern in card.type_line:
+				print (f"{card.name} found to be {pattern}")
+				rv.append(card)
+		return rv
+
+	def SearchByColor(self, pattern, cts = None):
+		print (f"Searching for color, {pattern}...")
+		rv = []
+		if cts is None:
+			cts = self.mainboard
+		for card in cts:
+			if pattern in card.manaCost:
+				print (f"{card.name} found to be {pattern}")
 				rv.append(card)
 		return rv
 
