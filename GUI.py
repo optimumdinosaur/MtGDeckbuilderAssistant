@@ -270,8 +270,8 @@ class Manager (tk.Frame):
 
 
 db = MtGCardDBHandler.LoadCardDataBase()
-d = Deck(filepath='rw-manabarbs.txt', database=db)
-# d = Deck()
+# d = Deck(filepath='rw-manabarbs.txt', database=db)
+d = Deck()
 r = tk.Tk()
 r.title("MtG DeckBuilding Assistant")
 manager = Manager(master=r, deck=d, database=db)
