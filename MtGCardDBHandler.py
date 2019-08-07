@@ -1,6 +1,6 @@
 import json
 
-card_db_filepath = "TrimmedCards5.json"
+card_db_filepath = "TrimmedCardsAug-05-19.json"
 
 def LoadCardDataBase(filepath = None):
 	if filepath is None:

@@ -6,18 +6,21 @@ from collapse import CollapsibleFrame
 import tkinter as tk
 from tkinter import filedialog
 
+recent_files_log_fp = 'mtgdbrecent.log'
+recent_files_log_length = 5
+
+
 class Manager (tk.Frame):
 	def __init__(self, master=None, deck = Deck(), database = MtGCardDBHandler.LoadCardDataBase()):
 		super().__init__(master)
 		self.master = master
 		self.database = database
+		self.recent_files_path = recent_files_log_fp
+		# self.grid_propagate(0)
 		self.SetupMenuBar()
 		self.SetupFilterFrame()
-		if deck:
-			self.deck = deck
-			# self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=5, pady=5)
-			# self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse")
-			self.UpdateDisplay()
+		self.deck = deck
+		self.UpdateDisplay()
 		self.pack()
 		self.master.bind("<Return>", self.SetCardQty)
 
@@ -26,6 +29,13 @@ class Manager (tk.Frame):
 		filemenu = tk.Menu(menubar, tearoff=0)
 		filemenu.add_command(label="New", command=self.NewDeck)
 		filemenu.add_command(label="Open", command=self.OpenDeck)
+		recentmenu = tk.Menu(menubar, tearoff=0)
+		filemenu.add_cascade(label="Open Recent", menu=recentmenu)
+		with open(self.recent_files_path) as rf_file:
+			for line in rf_file:
+				fp = line.strip()
+				recentmenu.add_command(label=fp, command=self.LoadDeck(fp))
+
 		filemenu.add_command(label="Save", command=self.SaveDeck)
 		filemenu.add_separator()
 		filemenu.add_command(label="Exit", command=self.master.quit)
@@ -76,6 +86,10 @@ class Manager (tk.Frame):
 	def ShowDeckList(self, dataset=None):
 		if dataset is None:
 			dataset = self.deck.mainboard
+
+		self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=5, pady=5, height=600, width=400)
+		self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse")
+
 		num_cards_lbl = tk.Label(self.decklist_frame, text=f"Total Number of Cards: {self.deck.card_count}")
 
 		nc_frame = tk.Frame(self.decklist_frame, padx=2, pady=2)
@@ -114,6 +128,7 @@ class Manager (tk.Frame):
 			qty_label.grid(row=0, column=0)
 			card_frame.pack(anchor="w")
 
+		self.decklist_frame.grid_propagate(0)
 		num_cards_lbl.grid(column=0, row=0)		
 		creature_frame.grid(column=0, row=1)
 		nc_frame.grid(column=1, row=1)
@@ -191,14 +206,55 @@ class Manager (tk.Frame):
 		self.UpdateDisplay()
 
 	def OpenDeck(self):
-		filename = tk.filedialog.askopenfilename(title="Select a file", initialdir='/')
+		filename = tk.filedialog.askopenfilename(title="Select a file to open")
 		print (filename)
+		self.LoadDeck(filename)
+		if filename is not '':
+			recent_files = []
+			with open(self.recent_files_path, 'r') as rf_file:
+				for line in rf_file:
+					fp = line.strip()
+					if fp != filename:
+						recent_files.append(fp)
+				recent_files.insert(0, filename)
+			# close and reopen file to clear its contents
+			with open(self.recent_files_path, 'w') as rf_file:
+				for rf in recent_files[:recent_files_log_length]:
+					rf_file.write(rf + '\n')
+
 		filedeck = Deck(filepath=filename, database=self.database)
 		self.deck = filedeck
 		self.UpdateDisplay()
 
+	# idk why this one doesn't work
+	# def OpenDeck(self):
+	# 	filename = tk.filedialog.askopenfilename(title="Select a file to open")
+	# 	print (filename)
+	# 	self.LoadDeck(filename)
+
+	def LoadDeck(self, filename):
+		def fun():
+			recent_files = []
+			with open(self.recent_files_path, 'r') as rf_file:
+				for line in rf_file:
+					fp = line.strip()
+					if fp != filename:
+						recent_files.append(fp)
+				recent_files.insert(0, filename)
+			# close and reopen file to clear its contents
+			with open(self.recent_files_path, 'w') as rf_file:
+				for rf in recent_files[:recent_files_log_length]:
+					rf_file.write(rf + '\n')
+
+			filedeck = Deck(filepath=filename, database=self.database)
+			self.deck = filedeck
+			self.UpdateDisplay()
+
+		return fun
+
+
 	def SaveDeck(self):
-		filename = tk.filedialog.asksaveasfilename(title="Choose file name", initialdir='/')
+		filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as", initialdir='/')
 		with open(filename, 'w') as out_file:
 			out_file.write(self.deck.to_string())
 		print (f"Deck saved to {filename}!")
@@ -254,12 +310,6 @@ class Manager (tk.Frame):
 		if dataset is None:
 			dataset = self.deck.mainboard
 
-		self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=5, pady=5)
-		self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse")
-
-		# for widget in self.decklist_frame.winfo_children():
-		# 	widget.destroy()
-
 		self.deck.CrunchNumbers(dataset=dataset)
 		self.ShowDeckList(dataset=dataset)
 		self.ShowCMCGraph()
@@ -271,7 +321,7 @@ class Manager (tk.Frame):
 
 db = MtGCardDBHandler.LoadCardDataBase()
 # d = Deck(filepath='rw-manabarbs.txt', database=db)
-d = Deck()
+d = Deck(database=db)
 r = tk.Tk()
 r.title("MtG DeckBuilding Assistant")
 manager = Manager(master=r, deck=d, database=db)
