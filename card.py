@@ -5,8 +5,8 @@ class Card:
 
 	def __init__(self):
 		self.name = ""
-		self.convertedManaCost = 0
-		self.manaCost = ""
+		self.cmc = 0
+		self.mana_cost = ""
 		self.colors = []
 		self.type_line = ""
 		self.text = ""
@@ -20,16 +20,16 @@ class Card:
 			return
 		self.name = nm
 		self.colors = card_data['colors']
-		self.convertedManaCost = int(card_data['convertedManaCost'])
+		self.cmc = int(card_data['convertedManaCost'])
 		if "names" in card_data:
 			self.names = card_data["names"]
 			self.layout = card_data["layout"]
 			if nm == card_data["names"][0]:
 				self.other_half = Card(self.names[1])
 		try:
-			self.manaCost = card_data['manaCost']
+			self.mana_cost = card_data['manaCost']
 		except KeyError:
-			self.manaCost = "{}"
+			self.mana_cost = "{}"
 		try:
 			self.text = card_data['text']
 		except KeyError:
@@ -38,15 +38,20 @@ class Card:
 		if "Creature" in self.type_line:
 			self.power = card_data["power"]
 			self.toughness = card_data["toughness"]
+		else:
+			self.power = None
+			self.toughness = None
 		if "loyalty" in card_data:
 			self.loyalty = card_data["loyalty"]
+		else:
+			self.loyalty = None
 		print ("Card created with name: " + nm)
 
 	def __str__(self):
-		ret_val = f"{self.name}: {self.manaCost} {self.type_line} - {self.text}"
+		ret_val = f"{self.name}: {self.mana_cost} {self.type_line} - {self.text}"
 		if "Creature" in self.type_line:
 			ret_val += f" ({self.power}/{self.toughness})"
-		if hasattr(self, 'loyalty'):
+		if 'Planeswalker' in self.type_line:
 			ret_val += f"\nLoyalty: {self.loyalty}"
 		if hasattr(self, 'names'):
 			if self.names[0] == self.name:

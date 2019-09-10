@@ -20,6 +20,7 @@ class Deck:
 		self.CountCards(dataset)
 		self.CalcCMCCurve(dataset)
 		self.GetColorDistribution(dataset)
+		self.GetTotalDevotion(dataset)
 		self.GetTypeDistribution(dataset)
 		self.GetCreatureSubtypes(dataset)
 
@@ -39,9 +40,8 @@ class Deck:
 
 	def SetCardQuantity(self, cardname, qty):
 		print (f"Setting card quantity for card, {cardname}, to {qty}...")
-		print (f"Looking for card with name, {cardname}...")
 		for card in self.mainboard:
-			print (f"Checking card, {card.name}")
+			# print (f"Checking card, {card.name}")
 			if re.match(cardname, card.name, re.I):
 				self.mainboard[card] = qty
 				if qty <= 0:
@@ -56,7 +56,7 @@ class Deck:
 			else:
 				print ("Card quantity not set, name not found. ")
 
-	def to_string(self):
+	def __str__(self):
 		# ret_val = f"Deck: {self.name}\n"
 		ret_val = ""
 		for c in self.mainboard:
@@ -105,22 +105,39 @@ class Deck:
 		self.CMCCurve = []
 		for card in dataset:
 			if "Land" not in card.type_line:
-				if len(self.CMCCurve) < card.convertedManaCost+1:
-					powerpole = [0] * (card.convertedManaCost - len(self.CMCCurve) + 1)
+				if len(self.CMCCurve) < card.cmc+1:
+					powerpole = [0] * (card.cmc - len(self.CMCCurve) + 1)
 					self.CMCCurve.extend(powerpole)	
-				self.CMCCurve[card.convertedManaCost] += self.mainboard[card]
+				self.CMCCurve[card.cmc] += self.mainboard[card]
 		return self.CMCCurve
 
+
+	# creates and returns a dictionary containing data on the colors in the deck
+	# keys are each color, as well as Colorless
+	# the values are a 2 element list. 
+	# the first element is the number of cards of that color
+	# the second is the deck's total devotion to that color (how many times that mana symbol appears in the cost of each of card of the deck)
 	def GetColorDistribution(self, dataset=None):
 		if dataset is None:
 			dataset = self.mainboard
 		self.color_dist = {'W': [0, 0], 'U': [0, 0], 'B': [0, 0], 'R': [0, 0], 'G': [0, 0], 'C':[0, 0]}
 		for color in self.color_dist:
 			for card in dataset:
-				if color in card.manaCost:
+				if color in card.mana_cost:
 					self.color_dist[color][0] += self.mainboard[card]
-					self.color_dist[color][1] += (card.manaCost.count(color) * self.mainboard[card])
+					self.color_dist[color][1] += (card.mana_cost.count(color) * self.mainboard[card])
 		return self.color_dist
+
+	def GetTotalDevotion(self, dataset=None):
+		if dataset is None:
+			dataset = self.mainboard
+		self.total_devotion = 0
+		colors = ['W', 'U', 'B', 'R', 'G', 'C']
+		for card in dataset:
+			for c in colors:
+				self.total_devotion += card.mana_cost.count(c) * self.mainboard[card]
+		print (f"Total Devotion to all colors: {self.total_devotion}")
+		return self.total_devotion
 
 	def GetTypeDistribution(self, dataset=None):
 		if dataset is None:
@@ -145,42 +162,73 @@ class Deck:
 					self.creature_subtypes[subtype] += self.mainboard[card]
 		return self.creature_subtypes
 
-	# returns a list of Cards that conatain the re pattern
-	def SearchByPhrase(self, pattern, cts = None):
+
+	# searches by comparing integer values on each card like power, toughness, cmc
+	# cproperty : which card property is being compared, represented by a single character P, T, or C
+	# value : what the search compares the value on card to
+	# comparison : how the search compares those values
+	def SearchByValueComparison(self, cproperty, value, comparison, dataset = None):
+		if dataset is None:
+			dataset = self.mainboard
+		def EqualTo(card_value, comp_value):
+			return (card_value == comp_value)
+		def LessThan(card_value, comp_value):
+			return (card_value < comp_value)
+		def GreaterThan(card_value, comp_value):
+			return (card_value > comp_value)
+		def LessEqual(card_value, comp_value):
+			return (card_value <= comp_value)
+		def GreaterEqual(card_value, comp_value):
+			return (card_value >= comp_value)
+		comp_switcher = { '=' : EqualTo, '<' : LessThan, '>' : GreaterThan, '<=' : LessEqual, '>=' : GreaterEqual }
+		func = comp_switcher.get(comparison)
 		rv = []
-		print (f'Searching for phrase, "{pattern}"...')
-		if cts is None:
-			cts = self.mainboard
-		for card in cts:
+
+		for card in dataset:
+			property_switcher = {'P' : card.power, 'T' : card.toughness, 'C' : card.cmc}
+			card_value = property_switcher.get(cproperty)
+			if card_value is None:
+				continue
+			if func(int(card_value), int(value)):
+				rv.append(card)
+		return rv
+
+	def SearchByName(self, pattern, dataset = None):
+		if dataset is None:
+			dataset = self.mainboard
+		rv = []
+		for card in dataset:
+			if re.search(pattern, card.name, re.I):
+				rv.append(card)
+		return rv
+
+	# returns a list of Cards that conatain the re pattern
+	def SearchByPhrase(self, pattern, dataset = None):
+		if dataset is None:
+			dataset = self.mainboard
+		rv = []
+		for card in dataset:
 			ptrn = pattern.replace('{N}', card.name)
 			if re.search(ptrn, card.text, re.I):
-				print (f'Match found with card, {card.name}')
-				rv.append(card)
-
-		print ("*Search Return Value: *")
-		for c in rv:
-			print (c.name)
-		return rv
-
-	def SearchByType(self, pattern, cts = None):
-		print (f"Searching for pattern, {pattern}...")
-		rv = []
-		if cts is None:
-			cts = self.mainboard
-		for card in cts:
-			if pattern in card.type_line:
-				print (f"{card.name} found to be {pattern}")
 				rv.append(card)
 		return rv
 
-	def SearchByColor(self, pattern, cts = None):
-		print (f"Searching for color, {pattern}...")
+	def SearchByType(self, pattern, dataset = None):
 		rv = []
-		if cts is None:
-			cts = self.mainboard
-		for card in cts:
-			if pattern in card.manaCost:
-				print (f"{card.name} found to be {pattern}")
+		if dataset is None:
+			dataset = self.mainboard
+		for card in dataset:
+			if re.search(pattern, card.type_line, re.I):
+				rv.append(card)
+		return rv
+
+
+	def SearchByColor(self, pattern, dataset = None):
+		rv = []
+		if dataset is None:
+			dataset = self.mainboard
+		for card in dataset:
+			if pattern in card.mana_cost:
 				rv.append(card)
 		return rv
 
