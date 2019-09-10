@@ -36,7 +36,7 @@ class Manager (tk.Frame):
 		filemenu.add_command(label="Open", command=self.OpenDeck)
 		recentmenu = tk.Menu(menubar, tearoff=0)
 		filemenu.add_cascade(label="Open Recent", menu=recentmenu)
-		with open(self.recent_files_path) as rf_file:
+		with open(self.recent_files_path, 'a+') as rf_file:
 			for line in rf_file:
 				fp = line.strip()
 				recentmenu.add_command(label=fp, command=self.LoadDeck(fp))
