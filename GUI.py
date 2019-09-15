@@ -5,6 +5,7 @@ from tooltip import CreateToolTip
 from collapse import CollapsibleFrame
 import tkinter as tk
 from tkinter import filedialog
+from PIL import Image, ImageTk
 
 recent_files_log_fp = 'mtgdbrecent.log'
 recent_files_log_length = 5
@@ -36,7 +37,7 @@ class Manager (tk.Frame):
 		filemenu.add_command(label="Open", command=self.OpenDeck)
 		recentmenu = tk.Menu(menubar, tearoff=0)
 		filemenu.add_cascade(label="Open Recent", menu=recentmenu)
-		with open(self.recent_files_path, 'a+') as rf_file:
+		with open(self.recent_files_path, 'r+') as rf_file:
 			for line in rf_file:
 				fp = line.strip()
 				recentmenu.add_command(label=fp, command=self.LoadDeck(fp))
@@ -60,19 +61,44 @@ class Manager (tk.Frame):
 
 		# Color
 		tk.Label(filter_frame, text="Color: ").grid(row=1, column=0)
+
 		self.white_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="W", variable=self.white_cbox_var).grid(row=1, column=1)
+		w_img = ImageTk.PhotoImage(Image.open("Symbols/w.png"))
+		w_cbutton = tk.Checkbutton(filter_frame, image=w_img, variable=self.white_cbox_var)
+		w_cbutton.image = w_img
+		w_cbutton.grid(row=1, column=1)
+
 		self.blue_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="U", variable=self.blue_cbox_var).grid(row=1, column=2)		
+		u_img = ImageTk.PhotoImage(Image.open("Symbols/u.png"))
+		u_cbutton = tk.Checkbutton(filter_frame, image=u_img, variable=self.blue_cbox_var)
+		u_cbutton.image = u_img
+		u_cbutton.grid(row=1, column=2)
+
 		self.black_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="B", variable=self.black_cbox_var).grid(row=1, column=3)		
+		b_img = ImageTk.PhotoImage(Image.open("Symbols/b.png"))
+		b_cbutton = tk.Checkbutton(filter_frame, image=b_img, variable=self.black_cbox_var)
+		b_cbutton.image = b_img
+		b_cbutton.grid(row=1, column=3)
+
 		self.red_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="R", variable=self.red_cbox_var).grid(row=1, column=4)		
+		r_img = ImageTk.PhotoImage(Image.open("Symbols/r.png"))
+		r_cbutton = tk.Checkbutton(filter_frame, image=r_img, variable=self.red_cbox_var)
+		r_cbutton.image = r_img
+		r_cbutton.grid(row=1, column=4)
+
 		self.green_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="G", variable=self.green_cbox_var).grid(row=1, column=5)		
+		g_img = ImageTk.PhotoImage(Image.open("Symbols/g.png"))
+		g_cbutton = tk.Checkbutton(filter_frame, image=g_img, variable=self.green_cbox_var)
+		g_cbutton.image = g_img
+		g_cbutton.grid(row=1, column=5)
+
 		self.colorless_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="C", variable=self.colorless_cbox_var).grid(row=1, column=6)
-		
+		c_img = ImageTk.PhotoImage(Image.open("Symbols/c.png"))
+		c_cbutton = tk.Checkbutton(filter_frame, image=c_img, variable=self.colorless_cbox_var)
+		c_cbutton.image = c_img
+		c_cbutton.grid(row=1, column=6)
+
+	
 		# CMC
 		tk.Label(filter_frame, text="CMC: ").grid(row=2, column=0)
 		self.cmc_search_var = tk.StringVar()
@@ -233,11 +259,16 @@ class Manager (tk.Frame):
 		x1 = 5
 		y1 = 5
 		y2 = 35
-		# cd_canvas.create_rectangle(x1, y1, 245, y2, fill="orange")
 
 		col_str = ""
 		cdict = {'W' : "White", 'U' : "Blue", "B" : "Black", "R" : "Red", "G" : "Green", "C" : "Colorless"}
-		rect_cdict = {'W' : "#FFF9E9", 'U' : "#284ECA", "B" : "#0E010E", "R" : "#F60000", "G" : "#12A90A", "C" : "#737373"}
+		rect_cdict = {'W' : "#f7f6a8", 
+					  'U' : "#3679ff", 
+					  "B" : "#200845",
+					  "R" : "#ff1919", 
+					  "G" : "#07f727", 
+					  "C" : "#b3b3b3",
+					  }
 		count = 0
 		for color in self.deck.color_dist:
 			if self.deck.color_dist[color][0] > 0:
@@ -425,8 +456,8 @@ class Manager (tk.Frame):
 
 
 db = MtGCardDBHandler.LoadCardDataBase()
-# d = Deck(database=db)
-d = Deck(filepath="Decks/rw-manabarbs.txt", database=db)
+d = Deck(database=db)
+# d = Deck(filepath="Decks/rw-manabarbs.txt", database=db)
 r = tk.Tk()
 r.title("MtG DeckBuilding Assistant")
 manager = Manager(master=r, deck=d, database=db)
