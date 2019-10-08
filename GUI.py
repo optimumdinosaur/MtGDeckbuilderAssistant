@@ -163,15 +163,15 @@ class Manager (tk.Frame):
 
 		num_cards_lbl = tk.Label(self.decklist_frame, text=f"Total Number of Cards: {self.deck.card_count}")
 
-		nc_frame = tk.Frame(self.decklist_frame, padx=2, pady=2)
-		artifact_frame = tk.LabelFrame(nc_frame, text="Artifacts", padx=2, pady=2)
 		creature_frame = tk.LabelFrame(self.decklist_frame, text="Creatures", padx=2, pady=2)
+		nc_frame = tk.Frame(self.decklist_frame, padx=2, pady=2) # noncreature frame
+		artifact_frame = tk.LabelFrame(nc_frame, text="Artifacts", padx=2, pady=2)
 		ench_frame = tk.LabelFrame(nc_frame, text="Enchantments", padx=2, pady=2)
 		pw_frame = tk.LabelFrame(nc_frame, text="Planeswalkers", padx=2, pady=2)
 		instant_frame = tk.LabelFrame(nc_frame, text="Instants", padx=2, pady=2)
 		sorcery_frame = tk.LabelFrame(nc_frame, text="Sorceries", padx=2, pady=2)
 		land_frame = tk.LabelFrame(nc_frame, text="Lands", padx=2, pady=2)
-		self.csbox_qty_dict = {}
+		self.cqty_sboxes = {}
 		for card in dataset:
 			if "Artifact" in card.type_line:
 				mstr = artifact_frame
@@ -192,14 +192,16 @@ class Manager (tk.Frame):
 			card_label = tk.Label(master = card_frame, text=f"{card.name} - {card.mana_cost}")
 			card_label.grid(row=0, column=1)
 			card_ttp = CreateToolTip(card_label, str(card))
-			# qty_var = tk.IntVar(value = self.deck.mainboard[card])
-			# to_value = 60 if 'Basic' in card.type_line else 4 	# set max qty to 4 unless card is a basic land
+			
 
-			# qty_box = tk.Spinbox(master = card_frame, width=2, textvariable = qty_var, from_ = 0, to = to_value, command=self.ChangeQtySpinbox)
-			# qty_box.grid(row=0, column=0)
-			# self.csbox_qty_dict[card.name, qty_box]
-			qty_label = tk.Label(master = card_frame, text=self.deck.mainboard[card])
-			qty_label.grid(row=0, column=0)
+			qty_var = tk.IntVar(value = self.deck.mainboard[card])
+			to_value = 60 if 'Basic' in card.type_line else 4 	# set max qty to 4 unless card is a basic land
+			
+
+			self.cqty_sboxes[card.name] = tk.Spinbox(master = card_frame, width=2, textvariable = qty_var, from_ = 0, to = to_value)
+			self.cqty_sboxes[card.name].config(command = lambda n=card.name: self.ChangeQtySpinbox(n))
+			self.cqty_sboxes[card.name].grid(row=0, column=0)
+
 			card_frame.pack(anchor="w")
 
 		# self.decklist_frame.grid_propagate(0)
@@ -214,20 +216,12 @@ class Manager (tk.Frame):
 		sorcery_frame.pack(anchor="w")
 		land_frame.pack(anchor="w")
 
-	# def ChangeQtySpinbox(self):
-	# 	for card in self.csbox_qty_dict:
-	# 		sbox_qty = int(self.csbox_qty_dict[card].get())
-	# 		if self.deck.mainboard[card]
 
-	def ChangeQtySpinbox(self, cardname, qty):
-		pass
-		# print ("**Spinbox changed for cardname, " + cardname +"**")
-		# def fun():
-		# 	print ("Staring the fun")
-		# 	self.deck.SetCardQuantity(cardname, qty)
-		# 	self.UpdateDisplay()
-		# 	print ("Done with fun")
-		# return fun()
+	def ChangeQtySpinbox(self, cardname):
+		qty = self.cqty_sboxes[cardname].get()
+		print ("**Spinbox changed for cardname, " + cardname + " to " + str(qty) + "**")
+		self.deck.SetCardQuantity(cardname, int(qty))
+		self.UpdateDisplay()
 
 
 	def ShowCMCGraph(self):
@@ -303,7 +297,9 @@ class Manager (tk.Frame):
 		# label = tk.Label(qty_frame, text='Set Quantity of Card: ').pack(side="left")
 		self.set_qty_entry = tk.Entry(qty_frame)
 		self.set_qty_entry.pack(side="left")
-		self.set_qty_amt = tk.Spinbox(qty_frame, from_=0, to=60, width=2)
+		
+		set_qty_val = tk.IntVar(value=1)
+		self.set_qty_amt = tk.Spinbox(qty_frame, from_=0, to=60, width=2, textvariable = set_qty_val)
 		self.set_qty_amt.pack(side="left", padx=1)
 		button = tk.Button(qty_frame, text="Update", command=self.SetCardQty).pack(side="left", padx=2)
 
@@ -331,12 +327,6 @@ class Manager (tk.Frame):
 		filedeck = Deck(filepath=filename, database=self.database)
 		self.deck = filedeck
 		self.UpdateDisplay()
-
-	# idk why this one doesn't work
-	# def OpenDeck(self):
-	# 	filename = tk.filedialog.askopenfilename(title="Select a file to open")
-	# 	print (filename)
-	# 	self.LoadDeck(filename)
 
 	def LoadDeck(self, filename):
 		def fun():
@@ -455,9 +445,11 @@ class Manager (tk.Frame):
 
 
 
+
+
 db = MtGCardDBHandler.LoadCardDataBase()
 d = Deck(database=db)
-# d = Deck(filepath="Decks/rw-manabarbs.txt", database=db)
+# d = Deck(filepath="Decks/ninja.txt", database=db)
 r = tk.Tk()
 r.title("MtG DeckBuilding Assistant")
 manager = Manager(master=r, deck=d, database=db)

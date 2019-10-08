@@ -44,7 +44,7 @@ class Deck:
 			# print (f"Checking card, {card.name}")
 			if re.match(cardname, card.name, re.I):
 				self.mainboard[card] = qty
-				if qty <= 0:
+				if int(qty) <= 0:
 					del self.mainboard[card]
 				return
 
@@ -95,7 +95,7 @@ class Deck:
 			dataset = self.mainboard
 		self.card_count = 0
 		for card in dataset:
-			self.card_count += self.mainboard[card]
+			self.card_count += int(self.mainboard[card])
 		return self.card_count
 
 
