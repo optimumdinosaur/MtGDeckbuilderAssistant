@@ -18,6 +18,9 @@ class Manager (tk.Frame):
 		self.database = database
 		self.recent_files_path = recent_files_log_fp
 		# self.grid_propagate(0)
+		self.deck_filepath = None
+		print (f"Manager Init: self.deck_filepath set to {self.deck_filepath}")
+
 		self.SetupMenuBar()
 		self.SetupFilterFrame()
 		self.deck = deck
@@ -26,7 +29,7 @@ class Manager (tk.Frame):
 		self.ShowCMCGraph()
 		self.ShowColorDistribution()
 		self.ShowTypeDistribution()
-		self.ShowSetCardQtyPanel()		
+		self.ShowSetCardQtyPanel()
 		self.pack()
 		self.master.bind("<Return>", self.SetCardQty)
 
@@ -34,7 +37,7 @@ class Manager (tk.Frame):
 		menubar = tk.Menu(self)
 		filemenu = tk.Menu(menubar, tearoff=0)
 		filemenu.add_command(label="New", command=self.NewDeck)
-		filemenu.add_command(label="Open", command=self.OpenDeck)
+		filemenu.add_command(label="Open", command=self.LoadDeck)
 		recentmenu = tk.Menu(menubar, tearoff=0)
 		filemenu.add_cascade(label="Open Recent", menu=recentmenu)
 		with open(self.recent_files_path, 'r+') as rf_file:
@@ -42,7 +45,8 @@ class Manager (tk.Frame):
 				fp = line.strip()
 				recentmenu.add_command(label=fp, command=self.LoadDeck(fp))
 
-		filemenu.add_command(label="Save", command=self.SaveDeck)
+		filemenu.add_command(label="Save", command= lambda: self.SaveDeck(self.deck_filepath))
+		filemenu.add_command(label="Save As", command=self.SaveDeck)
 		filemenu.add_separator()
 		filemenu.add_command(label="Exit", command=self.master.quit)
 		menubar.add_cascade(label="File", menu=filemenu)
@@ -307,29 +311,10 @@ class Manager (tk.Frame):
 		self.deck = Deck()
 		self.UpdateDisplay()
 
-	def OpenDeck(self):
-		filename = tk.filedialog.askopenfilename(title="Select a file to open")
-		print (filename)
-		self.LoadDeck(filename)
-		if filename is not '':
-			recent_files = []
-			with open(self.recent_files_path, 'r') as rf_file:
-				for line in rf_file:
-					fp = line.strip()
-					if fp != filename:
-						recent_files.append(fp)
-				recent_files.insert(0, filename)
-			# close and reopen file to clear its contents
-			with open(self.recent_files_path, 'w') as rf_file:
-				for rf in recent_files[:recent_files_log_length]:
-					rf_file.write(rf + '\n')
-
-		filedeck = Deck(filepath=filename, database=self.database)
-		self.deck = filedeck
-		self.UpdateDisplay()
-
 	def LoadDeck(self, filename):
 		def fun():
+			self.deck_filepath = filename
+			print (f"LoadDeck: self.deck_filepath set to {self.deck_filepath}")
 			recent_files = []
 			with open(self.recent_files_path, 'r') as rf_file:
 				for line in rf_file:
@@ -349,10 +334,16 @@ class Manager (tk.Frame):
 		return fun
 
 
-	def SaveDeck(self):
-		filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as")
+	def SaveDeck(self, filename=None):
+		if filename is None:
+			filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as")
+			self.deck_filepath = filename
+			print (f"SaveDeck: self.deck_filepath set to {self.deck_filepath}")
+
+
 		with open(filename, 'w') as out_file:
-			out_file.write(self.deck.to_string())
+			# out_file.write(self.deck.to_string())
+			out_file.write(str(self.deck))
 		print (f"Deck saved to {filename}!")
 
 	def Search(self):
