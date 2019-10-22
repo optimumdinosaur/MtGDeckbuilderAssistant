@@ -12,14 +12,17 @@ recent_files_log_length = 5
 
 
 class Manager (tk.Frame):
-	def __init__(self, master=None, deck = Deck(), database = MtGCardDBHandler.LoadCardDataBase()):
+	def __init__(self, master=None, deck = None, database =None):
 		super().__init__(master)
 		self.master = master
+		if database is None:
+			print ("Manager.init: About to load database...")
+			database = MtGCardDBHandler.LoadCardDataBase()
 		self.database = database
 		self.recent_files_path = recent_files_log_fp
 		# self.grid_propagate(0)
 		self.deck_filepath = None
-		print (f"Manager Init: self.deck_filepath set to {self.deck_filepath}")
+		print (f"Manager.init: self.deck_filepath set to {self.deck_filepath}")
 
 		self.SetupMenuBar()
 		self.SetupFilterFrame()
@@ -31,7 +34,7 @@ class Manager (tk.Frame):
 		self.ShowTypeDistribution()
 		self.ShowSetCardQtyPanel()
 		self.pack()
-		self.master.bind("<Return>", self.SetCardQty)
+		# self.master.bind("<Return>", self.SetCardQty)
 
 	def SetupMenuBar(self):
 		menubar = tk.Menu(self)
@@ -55,107 +58,105 @@ class Manager (tk.Frame):
 
 
 	def SetupFilterFrame(self):
-		filter_frame = tk.LabelFrame(self, text="Filter Cards")
-		filter_frame.grid(row=0, column=3, sticky="new", padx=2, pady=2, rowspan=2)
+		self.filter_frame = tk.LabelFrame(self, text="Filter Cards")
+		self.filter_frame.grid(row=0, column=3, sticky="new", padx=2, pady=2, rowspan=2)
 
 		# Name
-		tk.Label(filter_frame, text="Card Name: ").grid(column=0, row=0)
-		self.name_search_entry = tk.Entry(filter_frame, width=35)
+		tk.Label(self.filter_frame, text="Card Name: ").grid(column=0, row=0)
+		self.name_search_entry = tk.Entry(self.filter_frame, width=35)
 		self.name_search_entry.grid(row=0, column=1, columnspan=6, sticky='w')
+		self.name_search_entry.bind("<Return>", self.Search)
 
 		# Color
-		tk.Label(filter_frame, text="Color: ").grid(row=1, column=0)
-
+		tk.Label(self.filter_frame, text="Color: ").grid(row=1, column=0)
 		self.white_cbox_var = tk.IntVar()
 		w_img = ImageTk.PhotoImage(Image.open("Symbols/w.png"))
-		w_cbutton = tk.Checkbutton(filter_frame, image=w_img, variable=self.white_cbox_var)
+		w_cbutton = tk.Checkbutton(self.filter_frame, image=w_img, variable=self.white_cbox_var)
 		w_cbutton.image = w_img
 		w_cbutton.grid(row=1, column=1)
-
 		self.blue_cbox_var = tk.IntVar()
 		u_img = ImageTk.PhotoImage(Image.open("Symbols/u.png"))
-		u_cbutton = tk.Checkbutton(filter_frame, image=u_img, variable=self.blue_cbox_var)
+		u_cbutton = tk.Checkbutton(self.filter_frame, image=u_img, variable=self.blue_cbox_var)
 		u_cbutton.image = u_img
 		u_cbutton.grid(row=1, column=2)
-
 		self.black_cbox_var = tk.IntVar()
 		b_img = ImageTk.PhotoImage(Image.open("Symbols/b.png"))
-		b_cbutton = tk.Checkbutton(filter_frame, image=b_img, variable=self.black_cbox_var)
+		b_cbutton = tk.Checkbutton(self.filter_frame, image=b_img, variable=self.black_cbox_var)
 		b_cbutton.image = b_img
 		b_cbutton.grid(row=1, column=3)
-
 		self.red_cbox_var = tk.IntVar()
 		r_img = ImageTk.PhotoImage(Image.open("Symbols/r.png"))
-		r_cbutton = tk.Checkbutton(filter_frame, image=r_img, variable=self.red_cbox_var)
+		r_cbutton = tk.Checkbutton(self.filter_frame, image=r_img, variable=self.red_cbox_var)
 		r_cbutton.image = r_img
 		r_cbutton.grid(row=1, column=4)
-
 		self.green_cbox_var = tk.IntVar()
 		g_img = ImageTk.PhotoImage(Image.open("Symbols/g.png"))
-		g_cbutton = tk.Checkbutton(filter_frame, image=g_img, variable=self.green_cbox_var)
+		g_cbutton = tk.Checkbutton(self.filter_frame, image=g_img, variable=self.green_cbox_var)
 		g_cbutton.image = g_img
 		g_cbutton.grid(row=1, column=5)
-
 		self.colorless_cbox_var = tk.IntVar()
 		c_img = ImageTk.PhotoImage(Image.open("Symbols/c.png"))
-		c_cbutton = tk.Checkbutton(filter_frame, image=c_img, variable=self.colorless_cbox_var)
+		c_cbutton = tk.Checkbutton(self.filter_frame, image=c_img, variable=self.colorless_cbox_var)
 		c_cbutton.image = c_img
 		c_cbutton.grid(row=1, column=6)
 
-	
 		# CMC
-		tk.Label(filter_frame, text="CMC: ").grid(row=2, column=0)
+		tk.Label(self.filter_frame, text="CMC: ").grid(row=2, column=0)
 		self.cmc_search_var = tk.StringVar()
 		options = ['=', '<', '>', '<=', '>=']
 		self.cmc_search_var.set(options[0])
-		tk.OptionMenu(filter_frame, self.cmc_search_var, *options).grid(row=2, column=1, columnspan=2, sticky='ew')
-		self.cmc_search_entry = tk.Entry(filter_frame, width=4)
+		tk.OptionMenu(self.filter_frame, self.cmc_search_var, *options).grid(row=2, column=1, columnspan=2, sticky='ew')
+		self.cmc_search_entry = tk.Entry(self.filter_frame, width=4)
 		self.cmc_search_entry.grid(row=2, column=3, sticky='ew', padx=2)
+		self.cmc_search_entry.bind("<Return>", self.Search)
 
 		# Type
-		tk.Label(filter_frame, text="Type: ").grid(row=3, column=0)
+		tk.Label(self.filter_frame, text="Type: ").grid(row=3, column=0)
 		self.artifact_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="A", variable=self.artifact_cbox_var).grid(row=3, column=1)
+		tk.Checkbutton(self.filter_frame, text="A", variable=self.artifact_cbox_var).grid(row=3, column=1)
 		self.creature_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="C", variable=self.creature_cbox_var).grid(row=3, column=2)
+		tk.Checkbutton(self.filter_frame, text="C", variable=self.creature_cbox_var).grid(row=3, column=2)
 		self.enchantment_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="E", variable=self.enchantment_cbox_var).grid(row=3, column=3)
+		tk.Checkbutton(self.filter_frame, text="E", variable=self.enchantment_cbox_var).grid(row=3, column=3)
 		self.planeswalker_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="P", variable=self.planeswalker_cbox_var).grid(row=3, column=4)
+		tk.Checkbutton(self.filter_frame, text="P", variable=self.planeswalker_cbox_var).grid(row=3, column=4)
 		self.instant_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="I", variable=self.instant_cbox_var).grid(row=3, column=5)
+		tk.Checkbutton(self.filter_frame, text="I", variable=self.instant_cbox_var).grid(row=3, column=5)
 		self.sorcery_cbox_var = tk.IntVar()
-		tk.Checkbutton(filter_frame, text="S", variable=self.sorcery_cbox_var).grid(row=3, column=6)
+		tk.Checkbutton(self.filter_frame, text="S", variable=self.sorcery_cbox_var).grid(row=3, column=6)
 		
 		# Subtype
-		tk.Label(filter_frame, text="Subtype: ").grid(row=4, column=0)
-		self.subtype_search_entry = tk.Entry(filter_frame, width = 35)
+		tk.Label(self.filter_frame, text="Subtype: ").grid(row=4, column=0)
+		self.subtype_search_entry = tk.Entry(self.filter_frame, width = 35)
 		self.subtype_search_entry.grid(row=4, column=1, columnspan=6, sticky='w')
+		self.subtype_search_entry.bind("<Return>", self.Search)
 		
 		# Rules Text
-		tk.Label(filter_frame, text="Rules Text: ").grid(row=5, column=0)
-		self.rtext_search_entry = tk.Entry(filter_frame, width=35)
+		tk.Label(self.filter_frame, text="Rules Text: ").grid(row=5, column=0)
+		self.rtext_search_entry = tk.Entry(self.filter_frame, width=35)
 		self.rtext_search_entry.grid(row=5, column=1, columnspan=6, sticky='w')
+		self.rtext_search_entry.bind("<Return>", self.Search)
 		
 		# Power
-		tk.Label(filter_frame, text="Power: ").grid(row=6, column=0)
+		tk.Label(self.filter_frame, text="Power: ").grid(row=6, column=0)
 		self.power_search_var = tk.StringVar()
 		self.power_search_var.set(options[0])
-		tk.OptionMenu(filter_frame, self.power_search_var, *options).grid(row=6, column=1, columnspan=2, sticky='ew')
-		self.power_search_entry = tk.Entry(filter_frame, width=4)
+		tk.OptionMenu(self.filter_frame, self.power_search_var, *options).grid(row=6, column=1, columnspan=2, sticky='ew')
+		self.power_search_entry = tk.Entry(self.filter_frame, width=4)
 		self.power_search_entry.grid(row=6, column=3, sticky='ew', padx=2)
+		self.power_search_entry.bind("<Return>", self.Search)
 		
 		# Toughness
-		tk.Label(filter_frame, text="Toughness: ").grid(row=7, column=0)
+		tk.Label(self.filter_frame, text="Toughness: ").grid(row=7, column=0)
 		self.toughness_search_var = tk.StringVar()
 		self.toughness_search_var.set(options[0])
-		tk.OptionMenu(filter_frame, self.toughness_search_var, *options).grid(row=7, column=1, columnspan=2, sticky='ew')
-		self.toughness_search_entry = tk.Entry(filter_frame, width=4)
+		tk.OptionMenu(self.filter_frame, self.toughness_search_var, *options).grid(row=7, column=1, columnspan=2, sticky='ew')
+		self.toughness_search_entry = tk.Entry(self.filter_frame, width=4)
 		self.toughness_search_entry.grid(row=7, column=3, sticky='ew', padx=2)
+		self.toughness_search_entry.bind("<Return>", self.Search)
 
-		tk.Button(filter_frame, text="Go", command=self.Search).grid(row=6, column=5, rowspan=2, columnspan=2, padx=5, pady=2)
 
-
+		tk.Button(self.filter_frame, text="Go", command=self.Search).grid(row=6, column=5, rowspan=2, columnspan=2, padx=5, pady=2)
 
 
 	def ShowDeckList(self, dataset=None):
@@ -201,7 +202,6 @@ class Manager (tk.Frame):
 			qty_var = tk.IntVar(value = self.deck.mainboard[card])
 			to_value = 60 if 'Basic' in card.type_line else 4 	# set max qty to 4 unless card is a basic land
 			
-
 			self.cqty_sboxes[card.name] = tk.Spinbox(master = card_frame, width=2, textvariable = qty_var, from_ = 0, to = to_value)
 			self.cqty_sboxes[card.name].config(command = lambda n=card.name: self.ChangeQtySpinbox(n))
 			self.cqty_sboxes[card.name].grid(row=0, column=0)
@@ -296,16 +296,19 @@ class Manager (tk.Frame):
 			lbl = tk.Label(nc_frame, text=f"{t} - {self.deck.type_dist[t]}").grid(sticky="w")
 
 	def ShowSetCardQtyPanel(self):
-		qty_frame = tk.LabelFrame(self, padx=5, pady=5, text="Set Quantity of Card")
-		qty_frame.grid(column=3, row=3, padx=5, pady=5, sticky="wes")
-		# label = tk.Label(qty_frame, text='Set Quantity of Card: ').pack(side="left")
-		self.set_qty_entry = tk.Entry(qty_frame)
+		self.qty_frame = tk.LabelFrame(self, padx=5, pady=5, text="Set Quantity of Card")
+		self.qty_frame.grid(column=3, row=3, padx=5, pady=5, sticky="wes")
+		# label = tk.Label(self.qty_frame, text='Set Quantity of Card: ').pack(side="left")
+		self.set_qty_entry = tk.Entry(self.qty_frame)
+		self.set_qty_entry.bind("<Return>", self.SetCardQty)
 		self.set_qty_entry.pack(side="left")
 		
 		set_qty_val = tk.IntVar(value=1)
-		self.set_qty_amt = tk.Spinbox(qty_frame, from_=0, to=60, width=2, textvariable = set_qty_val)
+		self.set_qty_amt = tk.Spinbox(self.qty_frame, from_=0, to=60, width=2, textvariable = set_qty_val)
 		self.set_qty_amt.pack(side="left", padx=1)
-		button = tk.Button(qty_frame, text="Update", command=self.SetCardQty).pack(side="left", padx=2)
+		self.set_qty_amt.bind("<Return>", self.SetCardQty)
+		button = tk.Button(self.qty_frame, text="Update", command=self.SetCardQty).pack(side="left", padx=2)
+
 
 	def NewDeck(self):
 		self.deck = Deck()
@@ -427,6 +430,8 @@ class Manager (tk.Frame):
 		if dataset is None:
 			dataset = self.deck.mainboard
 
+		print ("UpdateDisplay: updating display...")
+		print ("UpdateDisplay: about to CrunchNumbers")
 		self.deck.CrunchNumbers(dataset=dataset)
 		self.ShowDeckList(dataset=dataset)
 		self.ShowCMCGraph()
@@ -437,11 +442,12 @@ class Manager (tk.Frame):
 
 
 
-
+print ("GUI.py: Loading database...")
 db = MtGCardDBHandler.LoadCardDataBase()
 d = Deck(database=db)
 # d = Deck(filepath="Decks/ninja.txt", database=db)
 r = tk.Tk()
 r.title("MtG DeckBuilding Assistant")
+print ("Creating Manager...")
 manager = Manager(master=r, deck=d, database=db)
 r.mainloop()

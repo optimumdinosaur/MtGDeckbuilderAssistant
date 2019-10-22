@@ -6,17 +6,22 @@ from collections import Counter
 
 class Deck:
 
-	def __init__(self, name = "", filepath=None, database=MtGCardDBHandler.LoadCardDataBase()):
+	def __init__(self, name = "", filepath=None, database=None):
 		self.name = name
 		self.mainboard = {}
+		if database is None:
+			print ("Deck.init: Loading database...")
+			database = MtGCardDBHandler.LoadCardDataBase()
 		self.database = database
 		if filepath:
 			self.BuildFromFile(filepath)
+		print ("Deck.init: about to CrunchNumbers")
 		self.CrunchNumbers()
 
 	def CrunchNumbers(self, dataset=None):
 		if dataset is None:
 			dataset = self.mainboard
+		print ("CrunchNumbers: crunching the numbers...")
 		self.CountCards(dataset)
 		self.CalcCMCCurve(dataset)
 		self.GetColorDistribution(dataset)

@@ -11,7 +11,10 @@ class Card:
 		self.type_line = ""
 		self.text = ""
 
-	def __init__(self, nm, database=MtGCardDBHandler.LoadCardDataBase()):
+	def __init__(self, nm, database=None):
+		if database is None:
+			print ("Card.init: Loading database...")
+			database = MtGCardDBHandler.LoadCardDataBase()
 		print (f"nm - {nm}")
 		try:
 			card_data = database[nm]
