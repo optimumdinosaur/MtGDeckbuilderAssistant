@@ -25,7 +25,7 @@ class Deck:
 		self.CountCards(dataset)
 		self.CalcCMCCurve(dataset)
 		self.GetColorDistribution(dataset)
-		self.GetTotalDevotion(dataset)
+		# self.GetTotalDevotion(dataset)
 		self.GetTypeDistribution(dataset)
 		self.GetCreatureSubtypes(dataset)
 
@@ -119,30 +119,35 @@ class Deck:
 
 	# creates and returns a dictionary containing data on the colors in the deck
 	# keys are each color, as well as Colorless
-	# the values are a 2 element list. 
+	# the values are a 3 element list. 
 	# the first element is the number of cards of that color
 	# the second is the deck's total devotion to that color (how many times that mana symbol appears in the cost of each of card of the deck)
+	# the third is the number of lands that provide this color mana
 	def GetColorDistribution(self, dataset=None):
 		if dataset is None:
 			dataset = self.mainboard
-		self.color_dist = {'W': [0, 0], 'U': [0, 0], 'B': [0, 0], 'R': [0, 0], 'G': [0, 0], 'C':[0, 0]}
+		self.color_dist = {'W': [0, 0, 0], 'U': [0, 0, 0], 'B': [0, 0, 0], 'R': [0, 0, 0], 'G': [0, 0, 0], 'C':[0, 0, 0]}
+		self.total_devotion = 0
+		self.total_land_devotion = 0 
+		print ("Deck.GetColorDistribution: Calculating Color Distribution...")
 		for color in self.color_dist:
 			for card in dataset:
 				if color in card.mana_cost:
 					self.color_dist[color][0] += self.mainboard[card]
-					self.color_dist[color][1] += (card.mana_cost.count(color) * self.mainboard[card])
-		return self.color_dist
+					devotion_from_card = card.mana_cost.count(color) * self.mainboard[card]
+					self.color_dist[color][1] += devotion_from_card
+					self.total_devotion += devotion_from_card
 
-	def GetTotalDevotion(self, dataset=None):
-		if dataset is None:
-			dataset = self.mainboard
-		self.total_devotion = 0
-		colors = ['W', 'U', 'B', 'R', 'G', 'C']
-		for card in dataset:
-			for c in colors:
-				self.total_devotion += card.mana_cost.count(c) * self.mainboard[card]
-		print (f"Total Devotion to all colors: {self.total_devotion}")
-		return self.total_devotion
+				if 'Land' in card.type_line:
+					pattern = ':.*{'+color+'}.*$'
+					if re.search(pattern, card.text, re.M):
+						self.color_dist[color][2] += self.mainboard[card]
+						self.total_land_devotion += self.mainboard[card]
+							
+
+		print (f"Deck.GetColorDistribution: Color Distribution: {self.color_dist}")
+		print (f"Deck.GetColorDistribution: Total Devotion: {self.total_devotion}")
+		return self.color_dist
 
 	def GetTypeDistribution(self, dataset=None):
 		if dataset is None:

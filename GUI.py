@@ -168,14 +168,14 @@ class Manager (tk.Frame):
 
 		num_cards_lbl = tk.Label(self.decklist_frame, text=f"Total Number of Cards: {self.deck.card_count}")
 
-		creature_frame = tk.LabelFrame(self.decklist_frame, text="Creatures", padx=2, pady=2)
+		creature_frame = tk.LabelFrame(self.decklist_frame, text=f"Creatures ({self.deck.type_dist['Creature']})", padx=2, pady=2)
 		nc_frame = tk.Frame(self.decklist_frame, padx=2, pady=2) # noncreature frame
-		artifact_frame = tk.LabelFrame(nc_frame, text="Artifacts", padx=2, pady=2)
-		ench_frame = tk.LabelFrame(nc_frame, text="Enchantments", padx=2, pady=2)
-		pw_frame = tk.LabelFrame(nc_frame, text="Planeswalkers", padx=2, pady=2)
-		instant_frame = tk.LabelFrame(nc_frame, text="Instants", padx=2, pady=2)
-		sorcery_frame = tk.LabelFrame(nc_frame, text="Sorceries", padx=2, pady=2)
-		land_frame = tk.LabelFrame(nc_frame, text="Lands", padx=2, pady=2)
+		artifact_frame = tk.LabelFrame(nc_frame, text=f"Artifacts ({self.deck.type_dist['Artifact']})", padx=2, pady=2) 
+		ench_frame = tk.LabelFrame(nc_frame, text=f"Enchantments ({self.deck.type_dist['Enchantment']})", padx=2, pady=2)
+		pw_frame = tk.LabelFrame(nc_frame, text=f"Planeswalkers ({self.deck.type_dist['Planeswalker']})", padx=2, pady=2)
+		instant_frame = tk.LabelFrame(nc_frame, text=f"Instants ({self.deck.type_dist['Instant']})", padx=2, pady=2)
+		sorcery_frame = tk.LabelFrame(nc_frame, text=f"Sorceries ({self.deck.type_dist['Sorcery']})", padx=2, pady=2)
+		land_frame = tk.LabelFrame(nc_frame, text=f"Lands ({self.deck.type_dist['Land']})", padx=2, pady=2)
 		self.cqty_sboxes = {}
 		for card in dataset:
 			if "Artifact" in card.type_line:
@@ -249,16 +249,20 @@ class Manager (tk.Frame):
 			cmc_canvas.create_text(x0+2, y0, anchor=tk.SW, text=str(y))
 
 	def ShowColorDistribution(self):
-		color_dist_frame = tk.LabelFrame(self, text="Color Distribution (Devotion)", padx=5, pady=5)
+		color_dist_frame = tk.LabelFrame(self, text="Color Distribution", padx=3, pady=3)
 		color_dist_frame.grid(column=2, row=1, padx=5, pady=3, sticky="wens")
 		
-		cd_canvas = tk.Canvas(color_dist_frame, width=250, height=40)
-		cd_canvas.pack()
-		x1 = 5
-		y1 = 5
-		y2 = 35
 
-		col_str = ""
+		cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
+		land_cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
+
+		x1_spells = 5
+		x1_lands = 5
+		y1 = 2
+		y2 = 30
+
+		col_str_spells = ""
+		col_str_lands = ""
 		cdict = {'W' : "White", 'U' : "Blue", "B" : "Black", "R" : "Red", "G" : "Green", "C" : "Colorless"}
 		rect_cdict = {'W' : "#f7f6a8", 
 					  'U' : "#3679ff", 
@@ -267,18 +271,36 @@ class Manager (tk.Frame):
 					  "G" : "#07f727", 
 					  "C" : "#b3b3b3",
 					  }
-		count = 0
+		count_spells = 0
+		count_lands = 0
 		for color in self.deck.color_dist:
 			if self.deck.color_dist[color][0] > 0:
-				x2 = int((self.deck.color_dist[color][1] / self.deck.total_devotion) * 240) + x1
-				cd_canvas.create_rectangle(x1, y1, x2, y2, fill=rect_cdict[color])
-				x1 = x2
-				count += 1
-				col_str += f"{cdict[color]}: {self.deck.color_dist[color][0]}({self.deck.color_dist[color][1]})    "
-				if count is 3:
-					col_str += '\n'
-		col_label = tk.Label(color_dist_frame, text=col_str)
-		col_label.pack()
+				x2_spells = int((self.deck.color_dist[color][1] / self.deck.total_devotion) * 240) + x1_spells
+				cd_canvas.create_rectangle(x1_spells, y1, x2_spells, y2, fill=rect_cdict[color])
+				x1_spells = x2_spells
+				count_spells += 1
+				col_str_spells += f"{cdict[color]}: {self.deck.color_dist[color][0]}({self.deck.color_dist[color][1]})    "
+				if count_spells is 3:
+					col_str_spells += '\n'
+			
+			if self.deck.color_dist[color][2] > 0:
+				x2_lands = int((self.deck.color_dist[color][2] / self.deck.total_land_devotion) * 240) + x1_lands
+				land_cd_canvas.create_rectangle(x1_lands, y1, x2_lands, y2, fill=rect_cdict[color])
+				x1_lands = x2_lands
+				count_lands +=1 
+				col_str_lands += f"{cdict[color]}: {self.deck.color_dist[color][2]}    "
+				if count_lands is 3:
+					col_str_lands += '\n'
+
+		tk.Label(color_dist_frame, text="Cost (Devotion) of Spells: ").pack()
+		cd_canvas.pack()
+		tk.Label(color_dist_frame, text=col_str_spells).pack()
+
+		tk.Label(color_dist_frame, text="Production from Lands: ").pack()
+		land_cd_canvas.pack()
+		tk.Label(color_dist_frame, text=col_str_lands).pack()
+
+
 
 	def ShowTypeDistribution(self):
 		self.type_dist_frame = tk.LabelFrame(self, text="Type Distribution", padx=5, pady=5)
@@ -296,7 +318,7 @@ class Manager (tk.Frame):
 			lbl = tk.Label(nc_frame, text=f"{t} - {self.deck.type_dist[t]}").grid(sticky="w")
 
 	def ShowSetCardQtyPanel(self):
-		self.qty_frame = tk.LabelFrame(self, padx=5, pady=5, text="Set Quantity of Card")
+		self.qty_frame = tk.LabelFrame(self, padx=5, pady=5, text="Quick Add a Card")
 		self.qty_frame.grid(column=3, row=3, padx=5, pady=5, sticky="wes")
 		# label = tk.Label(self.qty_frame, text='Set Quantity of Card: ').pack(side="left")
 		self.set_qty_entry = tk.Entry(self.qty_frame)
