@@ -45,8 +45,8 @@ class Manager (tk.Frame):
 		filemenu.add_cascade(label="Open Recent", menu=recentmenu)
 		with open(self.recent_files_path, 'r+') as rf_file:
 			for line in rf_file:
-				fp = line.strip()
-				recentmenu.add_command(label=fp, command=self.LoadDeck(fp))
+				filepath = line.strip()
+				recentmenu.add_command(label=filepath, command= lambda fp=filepath: self.LoadDeck(fp))
 
 		filemenu.add_command(label="Save", command= lambda: self.SaveDeck(self.deck_filepath))
 		filemenu.add_command(label="Save As", command=self.SaveDeck)
@@ -65,7 +65,7 @@ class Manager (tk.Frame):
 		tk.Label(self.filter_frame, text="Card Name: ").grid(column=0, row=0)
 		self.name_search_entry = tk.Entry(self.filter_frame, width=35)
 		self.name_search_entry.grid(row=0, column=1, columnspan=6, sticky='w')
-		self.name_search_entry.bind("<Return>", self.Search)
+		self.name_search_entry.bind("<Return>", self.EntrySearch)
 
 		# Color
 		tk.Label(self.filter_frame, text="Color: ").grid(row=1, column=0)
@@ -108,7 +108,7 @@ class Manager (tk.Frame):
 		tk.OptionMenu(self.filter_frame, self.cmc_search_var, *options).grid(row=2, column=1, columnspan=2, sticky='ew')
 		self.cmc_search_entry = tk.Entry(self.filter_frame, width=4)
 		self.cmc_search_entry.grid(row=2, column=3, sticky='ew', padx=2)
-		self.cmc_search_entry.bind("<Return>", self.Search)
+		self.cmc_search_entry.bind("<Return>", self.EntrySearch)
 
 		# Type
 		tk.Label(self.filter_frame, text="Type: ").grid(row=3, column=0)
@@ -129,13 +129,13 @@ class Manager (tk.Frame):
 		tk.Label(self.filter_frame, text="Subtype: ").grid(row=4, column=0)
 		self.subtype_search_entry = tk.Entry(self.filter_frame, width = 35)
 		self.subtype_search_entry.grid(row=4, column=1, columnspan=6, sticky='w')
-		self.subtype_search_entry.bind("<Return>", self.Search)
+		self.subtype_search_entry.bind("<Return>", self.EntrySearch)
 		
 		# Rules Text
 		tk.Label(self.filter_frame, text="Rules Text: ").grid(row=5, column=0)
 		self.rtext_search_entry = tk.Entry(self.filter_frame, width=35)
 		self.rtext_search_entry.grid(row=5, column=1, columnspan=6, sticky='w')
-		self.rtext_search_entry.bind("<Return>", self.Search)
+		self.rtext_search_entry.bind("<Return>", self.EntrySearch)
 		
 		# Power
 		tk.Label(self.filter_frame, text="Power: ").grid(row=6, column=0)
@@ -144,7 +144,7 @@ class Manager (tk.Frame):
 		tk.OptionMenu(self.filter_frame, self.power_search_var, *options).grid(row=6, column=1, columnspan=2, sticky='ew')
 		self.power_search_entry = tk.Entry(self.filter_frame, width=4)
 		self.power_search_entry.grid(row=6, column=3, sticky='ew', padx=2)
-		self.power_search_entry.bind("<Return>", self.Search)
+		self.power_search_entry.bind("<Return>", self.EntrySearch)
 		
 		# Toughness
 		tk.Label(self.filter_frame, text="Toughness: ").grid(row=7, column=0)
@@ -153,7 +153,7 @@ class Manager (tk.Frame):
 		tk.OptionMenu(self.filter_frame, self.toughness_search_var, *options).grid(row=7, column=1, columnspan=2, sticky='ew')
 		self.toughness_search_entry = tk.Entry(self.filter_frame, width=4)
 		self.toughness_search_entry.grid(row=7, column=3, sticky='ew', padx=2)
-		self.toughness_search_entry.bind("<Return>", self.Search)
+		self.toughness_search_entry.bind("<Return>", self.EntrySearch)
 
 
 		tk.Button(self.filter_frame, text="Go", command=self.Search).grid(row=6, column=5, rowspan=2, columnspan=2, padx=5, pady=2)
@@ -334,9 +334,14 @@ class Manager (tk.Frame):
 
 	def NewDeck(self):
 		self.deck = Deck()
+		self.deck_filepath = None
+		print (f"NewDeck: self.deck_filepath set to {self.deck_filepath}")
 		self.UpdateDisplay()
 
-	def LoadDeck(self, filename):
+	def LoadDeck(self, filename=None):
+		if filename is None:
+			filename = tk.filedialog.askopenfilename(title="Choose file to open")
+		
 		def fun():
 			self.deck_filepath = filename
 			print (f"LoadDeck: self.deck_filepath set to {self.deck_filepath}")
@@ -356,7 +361,8 @@ class Manager (tk.Frame):
 			self.deck = filedeck
 			self.UpdateDisplay()
 
-		return fun
+		return fun()
+
 
 
 	def SaveDeck(self, filename=None):
@@ -364,12 +370,14 @@ class Manager (tk.Frame):
 			filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as")
 			self.deck_filepath = filename
 			print (f"SaveDeck: self.deck_filepath set to {self.deck_filepath}")
-
-
 		with open(filename, 'w') as out_file:
 			# out_file.write(self.deck.to_string())
 			out_file.write(str(self.deck))
 		print (f"Deck saved to {filename}!")
+
+	def EntrySearch(self, other_param):
+		print (f"Manager.EntrySearch: other_param: {other_param}")
+		self.Search()
 
 	def Search(self):
 		print ("Beginning Search function...")

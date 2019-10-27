@@ -19,7 +19,7 @@ class Card:
 		try:
 			card_data = database[nm]
 		except KeyError:
-			print (f"Card not found: {nm}")
+			print (f"*** Card not found: {nm} ***")
 			return
 		self.name = nm
 		self.colors = card_data['colors']

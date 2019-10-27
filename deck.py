@@ -21,11 +21,9 @@ class Deck:
 	def CrunchNumbers(self, dataset=None):
 		if dataset is None:
 			dataset = self.mainboard
-		print ("CrunchNumbers: crunching the numbers...")
 		self.CountCards(dataset)
 		self.CalcCMCCurve(dataset)
 		self.GetColorDistribution(dataset)
-		# self.GetTotalDevotion(dataset)
 		self.GetTypeDistribution(dataset)
 		self.GetCreatureSubtypes(dataset)
 
@@ -105,10 +103,12 @@ class Deck:
 
 
 	def CalcCMCCurve(self, dataset=None):
+		print ("Deck.CalcCMCCurve: Starting CMC Curve calculation...")
 		if dataset is None:
 			dataset=self.mainboard
 		self.CMCCurve = []
 		for card in dataset:
+			print (f"Looking at card: {card.name}...")
 			if "Land" not in card.type_line:
 				if len(self.CMCCurve) < card.cmc+1:
 					powerpole = [0] * (card.cmc - len(self.CMCCurve) + 1)
@@ -145,8 +145,8 @@ class Deck:
 						self.total_land_devotion += self.mainboard[card]
 							
 
-		print (f"Deck.GetColorDistribution: Color Distribution: {self.color_dist}")
-		print (f"Deck.GetColorDistribution: Total Devotion: {self.total_devotion}")
+		# print (f"Deck.GetColorDistribution: Color Distribution: {self.color_dist}")
+		# print (f"Deck.GetColorDistribution: Total Devotion: {self.total_devotion}")
 		return self.color_dist
 
 	def GetTypeDistribution(self, dataset=None):
