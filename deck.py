@@ -103,12 +103,10 @@ class Deck:
 
 
 	def CalcCMCCurve(self, dataset=None):
-		print ("Deck.CalcCMCCurve: Starting CMC Curve calculation...")
 		if dataset is None:
 			dataset=self.mainboard
 		self.CMCCurve = []
 		for card in dataset:
-			print (f"Looking at card: {card.name}...")
 			if "Land" not in card.type_line:
 				if len(self.CMCCurve) < card.cmc+1:
 					powerpole = [0] * (card.cmc - len(self.CMCCurve) + 1)
@@ -129,7 +127,6 @@ class Deck:
 		self.color_dist = {'W': [0, 0, 0], 'U': [0, 0, 0], 'B': [0, 0, 0], 'R': [0, 0, 0], 'G': [0, 0, 0], 'C':[0, 0, 0]}
 		self.total_devotion = 0
 		self.total_land_devotion = 0 
-		print ("Deck.GetColorDistribution: Calculating Color Distribution...")
 		for color in self.color_dist:
 			for card in dataset:
 				if color in card.mana_cost:
@@ -190,12 +187,20 @@ class Deck:
 			return (card_value <= comp_value)
 		def GreaterEqual(card_value, comp_value):
 			return (card_value >= comp_value)
-		comp_switcher = { '=' : EqualTo, '<' : LessThan, '>' : GreaterThan, '<=' : LessEqual, '>=' : GreaterEqual }
+		comp_switcher = { '=' : EqualTo, 
+						  '<' : LessThan, 
+						  '>' : GreaterThan, 
+						  '<=' : LessEqual, 
+						  '>=' : GreaterEqual, 
+						 }
 		func = comp_switcher.get(comparison)
 		rv = []
 
 		for card in dataset:
-			property_switcher = {'P' : card.power, 'T' : card.toughness, 'C' : card.cmc}
+			property_switcher = {'P' : card.power, 
+								 'T' : card.toughness, 
+								 'C' : card.cmc,
+								 }
 			card_value = property_switcher.get(cproperty)
 			if card_value is None:
 				continue
@@ -208,7 +213,7 @@ class Deck:
 			dataset = self.mainboard
 		rv = []
 		for card in dataset:
-			if re.search(pattern, card.name, re.I):
+			if re.search(rf'{pattern}', card.name, re.I):
 				rv.append(card)
 		return rv
 
@@ -223,12 +228,14 @@ class Deck:
 				rv.append(card)
 		return rv
 
+	# Searches the card.type_line by whole word
+	# Used for searching Type and Subtype
 	def SearchByType(self, pattern, dataset = None):
 		rv = []
 		if dataset is None:
 			dataset = self.mainboard
 		for card in dataset:
-			if re.search(pattern, card.type_line, re.I):
+			if re.search(rf'\b{pattern}\b', card.type_line, re.I):
 				rv.append(card)
 		return rv
 
@@ -241,9 +248,3 @@ class Deck:
 			if pattern in card.mana_cost:
 				rv.append(card)
 		return rv
-
-	# prints a list of Cards
-	def PrintSearchResults(self, results):
-		print ("Search Results:")
-		for card in results:
-			print (f"{self.mainboard[card]} - {str(card)}")

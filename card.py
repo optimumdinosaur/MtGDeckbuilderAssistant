@@ -13,7 +13,7 @@ class Card:
 
 	def __init__(self, nm, database=None):
 		if database is None:
-			print ("Card.init: Loading database...")
+			print ("Card.init: Loading database. This is not the thing that should be loading database.")
 			database = MtGCardDBHandler.LoadCardDataBase()
 		print (f"nm - {nm}")
 		try:

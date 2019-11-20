@@ -6,6 +6,7 @@ from collapse import CollapsibleFrame
 import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk
+import re
 
 recent_files_log_fp = 'mtgdbrecent.log'
 recent_files_log_length = 5
@@ -25,16 +26,23 @@ class Manager (tk.Frame):
 		print (f"Manager.init: self.deck_filepath set to {self.deck_filepath}")
 
 		self.SetupMenuBar()
+
+		self.decklist_column = tk.Frame(self)
+		self.decklist_column.pack(side='left', fill='both', expand=True, padx=3)
+		self.deckstats_column = tk.Frame(self)
+		self.deckstats_column.pack(side='left', fill='both', expand=True, padx=3)
+		self.search_column = tk.Frame(self)
+		self.search_column.pack(side='left', fill='both', expand=True, padx=3)
+
 		self.SetupFilterFrame()
+		self.SetupSearchResultsFrame()
+		self.SetupSetCardQtyPanel()
 		self.deck = deck
-		# self.UpdateDisplay()
-		self.ShowDeckList()
-		self.ShowCMCGraph()
-		self.ShowColorDistribution()
-		self.ShowTypeDistribution()
-		self.ShowSetCardQtyPanel()
+		self.SetupDeckListFrame()
+		self.SetupCMCGraph()
+		self.SetupColorDistribution()
+		self.SetupTypeDistributionFrame()
 		self.pack()
-		# self.master.bind("<Return>", self.SetCardQty)
 
 	def SetupMenuBar(self):
 		menubar = tk.Menu(self)
@@ -58,8 +66,9 @@ class Manager (tk.Frame):
 
 
 	def SetupFilterFrame(self):
-		self.filter_frame = tk.LabelFrame(self, text="Filter Cards")
-		self.filter_frame.grid(row=0, column=3, sticky="new", padx=2, pady=2, rowspan=2)
+		self.filter_frame = tk.LabelFrame(self.search_column, text="Filter Cards")
+		self.filter_frame.pack(fill='both', expand=True)
+		# self.filter_frame.grid(row=0, column=3, sticky="new", padx=2, pady=2, rowspan=2)
 
 		# Name
 		tk.Label(self.filter_frame, text="Card Name: ").grid(column=0, row=0)
@@ -155,16 +164,39 @@ class Manager (tk.Frame):
 		self.toughness_search_entry.grid(row=7, column=3, sticky='ew', padx=2)
 		self.toughness_search_entry.bind("<Return>", self.EntrySearch)
 
-
 		tk.Button(self.filter_frame, text="Go", command=self.Search).grid(row=6, column=5, rowspan=2, columnspan=2, padx=5, pady=2)
 
+		
+		tk.Label(self.filter_frame, text="Search the: ").grid(row=8, column=1, columnspan=3)
+		self.search_deck_cbox_var = tk.BooleanVar()
+		self.search_deck_cbox = tk.Checkbutton(self.filter_frame, text="Deck", variable=self.search_deck_cbox_var)
+		self.search_deck_cbox.grid(row=8, column=3, padx=1, pady=1, columnspan=2)
 
-	def ShowDeckList(self, dataset=None):
+		self.search_database_cbox_var = tk.BooleanVar()
+		self.search_database_cbox = tk.Checkbutton(self.filter_frame, text="Database", variable=self.search_database_cbox_var)
+		self.search_database_cbox.grid(row=8, column=5, padx=1, pady=1, columnspan=2)
+
+
+	def SetupSearchResultsFrame(self):
+		self.search_results_frame = tk.LabelFrame(self.search_column, text="Search Results", padx=3, pady=3)
+		self.search_results_frame.pack(fill='both', expand=True)
+		# self.search_results_frame.grid(row=1, column=3, sticky='nwse', padx=3, pady=3)
+
+		scrollbar = tk.Scrollbar(self.search_results_frame, orient='vertical')
+		self.search_listbox = tk.Listbox(self.search_results_frame, yscrollcommand=scrollbar.set)
+		scrollbar.config(command=self.search_listbox.yview)
+		scrollbar.pack(side='right', fill='y')
+		self.search_listbox.pack(side='left', fill='both', expand=1)
+
+
+
+	def SetupDeckListFrame(self, dataset=None):
 		if dataset is None:
 			dataset = self.deck.mainboard
 
-		self.decklist_frame = tk.LabelFrame(self, text="DeckList", padx=3, pady=3)
-		self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse", padx=5, pady=5)
+		self.decklist_frame = tk.LabelFrame(self.decklist_column, text="DeckList", padx=3, pady=3)
+		self.decklist_frame.pack(fill='both', expand=True)
+		# self.decklist_frame.grid(row=0, column=0, rowspan=5, sticky="nwse", padx=5, pady=5)
 
 		num_cards_lbl = tk.Label(self.decklist_frame, text=f"Total Number of Cards: {self.deck.card_count}")
 
@@ -198,7 +230,6 @@ class Manager (tk.Frame):
 			card_label.grid(row=0, column=1)
 			card_ttp = CreateToolTip(card_label, str(card))
 			
-
 			qty_var = tk.IntVar(value = self.deck.mainboard[card])
 			to_value = 60 if 'Basic' in card.type_line else 4 	# set max qty to 4 unless card is a basic land
 			
@@ -220,17 +251,17 @@ class Manager (tk.Frame):
 		sorcery_frame.pack(anchor="w")
 		land_frame.pack(anchor="w")
 
-
+	# Function called when a spinbox in the decklist display is changed
 	def ChangeQtySpinbox(self, cardname):
 		qty = self.cqty_sboxes[cardname].get()
 		print ("**Spinbox changed for cardname, " + cardname + " to " + str(qty) + "**")
 		self.deck.SetCardQuantity(cardname, int(qty))
 		self.UpdateDisplay()
 
-
-	def ShowCMCGraph(self):
-		cmc_frame = tk.LabelFrame(self, text="Converted Mana Costs", padx=5, pady=5)
-		cmc_frame.grid(column=2, row=0, padx=5, pady=5, sticky='new')
+	def SetupCMCGraph(self):
+		cmc_frame = tk.LabelFrame(self.deckstats_column, text="Converted Mana Costs", padx=3, pady=3)
+		cmc_frame.pack(fill='both', expand=True)
+		# cmc_frame.grid(column=2, row=0, padx=5, pady=5, sticky='new')
 		c_width = 250
 		c_height = 200
 		cmc_canvas = tk.Canvas(cmc_frame, width = c_width, height = c_height)
@@ -248,11 +279,11 @@ class Manager (tk.Frame):
 			cmc_canvas.create_rectangle(x0, y0, x1, y1, fill="orange")
 			cmc_canvas.create_text(x0+2, y0, anchor=tk.SW, text=str(y))
 
-	def ShowColorDistribution(self):
-		color_dist_frame = tk.LabelFrame(self, text="Color Distribution", padx=3, pady=3)
-		color_dist_frame.grid(column=2, row=1, padx=5, pady=3, sticky="wens")
+	def SetupColorDistribution(self):
+		color_dist_frame = tk.LabelFrame(self.deckstats_column, text="Color Distribution", padx=3, pady=3)
+		color_dist_frame.pack(fill='both', expand=True)
+		# color_dist_frame.grid(column=2, row=1, padx=5, pady=3, sticky="wens")
 		
-
 		cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
 		land_cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
 
@@ -264,11 +295,11 @@ class Manager (tk.Frame):
 		col_str_spells = ""
 		col_str_lands = ""
 		cdict = {'W' : "White", 'U' : "Blue", "B" : "Black", "R" : "Red", "G" : "Green", "C" : "Colorless"}
-		rect_cdict = {'W' : "#f7f6a8", 
+		rect_cdict = {'W' : "#fffee0",
 					  'U' : "#3679ff", 
-					  "B" : "#200845",
+					  "B" : "#180420",
 					  "R" : "#ff1919", 
-					  "G" : "#07f727", 
+					  "G" : "#0b9d1a", 
 					  "C" : "#b3b3b3",
 					  }
 		count_spells = 0
@@ -302,9 +333,10 @@ class Manager (tk.Frame):
 
 
 
-	def ShowTypeDistribution(self):
-		self.type_dist_frame = tk.LabelFrame(self, text="Type Distribution", padx=5, pady=5)
-		self.type_dist_frame.grid(column=2, row=3, padx=5, pady=5, sticky="wens")
+	def SetupTypeDistributionFrame(self):
+		self.type_dist_frame = tk.LabelFrame(self.deckstats_column, text="Type Distribution", padx=5, pady=5)
+		self.type_dist_frame.pack(fill='both', expand=True)
+		# self.type_dist_frame.grid(column=2, row=3, padx=5, pady=5, sticky="wens")
 		creature_dist = CollapsibleFrame(self.type_dist_frame, text = f"Creature - {self.deck.type_dist['Creature']}", interior_padx=3, interior_pady=5, width=120)
 		creature_dist.grid(row=0, column=1, padx=5, pady=5, sticky="ne")
 		for st in self.deck.creature_subtypes:
@@ -317,13 +349,13 @@ class Manager (tk.Frame):
 				continue
 			lbl = tk.Label(nc_frame, text=f"{t} - {self.deck.type_dist[t]}").grid(sticky="w")
 
-	def ShowSetCardQtyPanel(self):
-		self.qty_frame = tk.LabelFrame(self, padx=5, pady=5, text="Quick Add a Card")
-		self.qty_frame.grid(column=3, row=3, padx=5, pady=5, sticky="wes")
-		# label = tk.Label(self.qty_frame, text='Set Quantity of Card: ').pack(side="left")
+	def SetupSetCardQtyPanel(self):
+		self.qty_frame = tk.LabelFrame(self.search_column, padx=5, pady=5, text="Quick Add a Card")
+		self.qty_frame.pack(fill='both', expand=True)		
+		# self.qty_frame.grid(column=3, row=3, padx=5, pady=5, sticky="wes")
 		self.set_qty_entry = tk.Entry(self.qty_frame)
 		self.set_qty_entry.bind("<Return>", self.SetCardQty)
-		self.set_qty_entry.pack(side="left")
+		self.set_qty_entry.pack(side="left", fill='x', expand=True)
 		
 		set_qty_val = tk.IntVar(value=1)
 		self.set_qty_amt = tk.Spinbox(self.qty_frame, from_=0, to=60, width=2, textvariable = set_qty_val)
@@ -379,73 +411,204 @@ class Manager (tk.Frame):
 		print (f"Manager.EntrySearch: other_param: {other_param}")
 		self.Search()
 
+	# Function called by Search button and Entry boxes in filter_frame
 	def Search(self):
-		print ("Beginning Search function...")
-		final_results = set(self.deck.mainboard.keys())
-		
+		print ("Manager.Search: starting the search...")
+		if self.search_deck_cbox_var.get():
+			decklist_final_results = set(self.deck.mainboard.keys())
+		if self.search_database_cbox_var.get():
+			database_final_results = set(self.database.keys())
 		# Name
 		name = self.name_search_entry.get()
 		if name:
-			print ("searched by NAME")
-			final_results = set(self.deck.SearchByName(name, dataset = final_results))
-
+			if self.search_deck_cbox_var.get():
+				decklist_final_results = set(self.deck.SearchByName(name, dataset = decklist_final_results))
+			if self.search_database_cbox_var.get():
+				database_final_results = set(self.SearchByName(name, dataset = database_final_results))
 		# CMC
 		cmc_comp_value = self.cmc_search_entry.get()
 		if cmc_comp_value:
 			cmc_comp_char = self.cmc_search_var.get()
-			final_results = set(self.deck.SearchByValueComparison('C', cmc_comp_value, cmc_comp_char, dataset=final_results))
-		
+			if self.search_deck_cbox_var.get():
+				decklist_final_results = set(self.deck.SearchByValueComparison('C', cmc_comp_value, cmc_comp_char, dataset=decklist_final_results))		
+			if self.search_database_cbox_var.get():
+				database_final_results = set(self.SearchByValueComparison('C', cmc_comp_value, cmc_comp_char, dataset=database_final_results))
+
 		# Subtype
 		subtype = self.subtype_search_entry.get()
 		if subtype:
-			print ("searched by SUBTYPE")
-			final_results = set(self.deck.SearchByType(subtype, dataset = final_results))
+			if self.search_deck_cbox_var.get():
+				decklist_final_results = set(self.deck.SearchByType(subtype, dataset = decklist_final_results))
+			if self.search_database_cbox_var.get():
+				database_final_results = set(self.SearchByType(subtype, dataset = database_final_results))
 
 		# Power
 		power_comp_value = self.power_search_entry.get()
 		if power_comp_value:
 			power_comp_char = self.power_search_var.get()
-			final_results = set(self.deck.SearchByValueComparison('P', power_comp_value, power_comp_char, dataset=final_results))
+			if self.search_deck_cbox_var.get():
+				decklist_final_results = set(self.deck.SearchByValueComparison('P', power_comp_value, power_comp_char, dataset=decklist_final_results))
+			if self.search_database_cbox_var.get():
+				database_final_results = set(self.SearchByValueComparison('P', power_comp_value, power_comp_char, dataset=database_final_results))
 
 		# Toughness
 		toughness_comp_value = self.toughness_search_entry.get()
 		if toughness_comp_value:
 			toughness_comp_char = self.toughness_search_var.get()
-			final_results = set(self.deck.SearchByValueComparison('T', toughness_comp_value, toughness_comp_char, dataset=final_results))
+			if self.search_deck_cbox_var.get():
+				decklist_final_results = set(self.deck.SearchByValueComparison('T', toughness_comp_value, toughness_comp_char, dataset=decklist_final_results))
+			if self.search_database_cbox_var.get():
+				database_final_results = set(self.SearchByValueComparison('T', toughness_comp_value, toughness_comp_char, dataset=database_final_results))
 
 		# Rules Text
 		phrase = self.rtext_search_entry.get()
 		if phrase:
-			print ("Phrase found to be nonzero")
-			final_results = set(self.deck.SearchByPhrase(phrase, dataset = final_results))
-
+			if self.search_deck_cbox_var.get():
+				decklist_final_results = set(self.deck.SearchByPhrase(phrase, dataset = decklist_final_results))
+			if self.search_database_cbox_var.get():
+				database_final_results = set(self.SearchByPhrase(phrase, dataset = database_final_results))
+		
 		# Type
 		type_checks = {'Artifact' : self.artifact_cbox_var.get(), 'Creature' : self.creature_cbox_var.get(), 'Enchantment' : self.enchantment_cbox_var.get(), 'Instant' : self.instant_cbox_var.get(), 'Planeswalker' : self.planeswalker_cbox_var.get(), 'Sorcery' : self.sorcery_cbox_var.get()}
 		if sum(type_checks.values()):
-			print ("Found one of the type cboxes to be checked")
-			type_results = set()
-			for t in type_checks:
-				if type_checks[t]:
-					res = set(self.deck.SearchByType(t))
-					type_results = type_results | res
-			final_results = final_results & type_results
-
+			if self.search_deck_cbox_var.get():
+				_type_results = set()
+				for t in type_checks:
+					if type_checks[t]:
+						_res = set(self.deck.SearchByType(t))
+						_type_results = _type_results | _res
+				decklist_final_results = decklist_final_results & _type_results
+			if self.search_database_cbox_var.get():
+				_type_results = set()
+				for t in type_checks:
+					if type_checks[t]:
+						_res = set(self.SearchByType(t))
+						_type_results = _type_results | _res
+				database_final_results = database_final_results & _type_results
+	
 		# Color
 		color_checks = {'W' : self.white_cbox_var.get(), 'U' : self.blue_cbox_var.get(), 'B' : self.black_cbox_var.get(), 'R' : self.red_cbox_var.get(), 'G' : self.green_cbox_var.get(), 'C' : self.colorless_cbox_var.get()}
 		if sum(color_checks.values()):
-			print ("At least one Color box is checked")
-			color_results = set()
-			for c in color_checks:
-				if color_checks[c]:
-					res = set(self.deck.SearchByColor(c))
-					color_results = color_results | res
-			final_results = final_results & color_results
- 
-		print ("**Results after searches:**")
-		for c in final_results:
-			print (c.name)
+			if self.search_deck_cbox_var.get():
+				_color_results = set()
+				for c in color_checks:
+					if color_checks[c]:
+						_res = set(self.deck.SearchByColor(c))
+						_color_results = _color_results | _res
+				decklist_final_results = decklist_final_results & _color_results			
+			if self.search_database_cbox_var.get():
+				_color_results = set()
+				for c in color_checks:
+					if color_checks[c]:
+						_res = set(self.SearchByColor(c))
+						_color_results = _color_results | _res
+				database_final_results = database_final_results & _color_results
 
-		self.UpdateDisplay(list(final_results))
+		print ("Manager.Search: search complete")
+	
+		if self.search_deck_cbox_var.get():
+			self.UpdateDisplay(list(decklist_final_results))
+			print ("Manager.Search: display updated")
+
+		if self.search_database_cbox_var.get():
+			self.search_listbox.delete(0, 'end')
+			for card in database_final_results:
+				print (f"Manager.SearchDatabase: found card: {card}")
+				self.search_listbox.insert('end', card)
+			print ("Manager.Search: Database results listbox updated")
+
+
+
+	# Function to search a card database by name
+	def SearchByName(self, pattern, dataset=None):
+		if dataset is None:
+			dataset = self.database.keys()
+		rv = []
+		for card in dataset:
+			if re.search(rf'{pattern}', card, re.I):
+				rv.append(card)
+		return rv
+
+	def SearchByPhrase(self, pattern, dataset=None):
+		if dataset is None:
+			dataset = self.database.keys()
+		rv = []
+		for card in dataset:
+			ptrn = pattern.replace('{N}', card)
+			try:
+				card_text = self.database[card]['text']
+			except KeyError:
+				continue
+			if re.search(ptrn, card_text, re.I):
+				rv.append(card)
+		return rv
+
+	def SearchByValueComparison(self, cproperty, value, comparison, dataset=None):
+		if dataset is None:
+			datset = self.database.keys()
+		def EqualTo(card_value, comp_value):
+			return (card_value == comp_value)
+		def LessThan(card_value, comp_value):
+			return (card_value < comp_value)
+		def GreaterThan(card_value, comp_value):
+			return (card_value > comp_value)
+		def LessEqual(card_value, comp_value):
+			return (card_value <= comp_value)
+		def GreaterEqual(card_value, comp_value):
+			return (card_value >= comp_value)
+		comp_switcher = { '=' : EqualTo, 
+						  '<' : LessThan, 
+						  '>' : GreaterThan, 
+						  '<=' : LessEqual, 
+						  '>=' : GreaterEqual, 
+						}
+		func = comp_switcher.get(comparison)
+		rv = []
+		for card in dataset:
+			card_value = None
+			if cproperty == 'P':
+				try:
+					card_value = int(self.database[card]['power'])
+				except KeyError:
+					continue 
+				except ValueError: # occurs when a creature has * for Power
+					continue
+			elif cproperty == 'T':
+				try:
+					card_value = int(self.database[card]['toughness'])
+				except KeyError:
+					continue 
+				except ValueError: # occurs when a creature has * for Toughness
+					continue
+			elif cproperty == 'C':
+				try:
+					card_value = self.database[card]['convertedManaCost']
+				except KeyError:
+					continue 
+			if card_value is None: # card does not have this property
+				continue
+
+			if func(int(card_value), int(value)):
+				rv.append(card)
+		return rv
+
+	def SearchByType(self, pattern, dataset = None):
+		if dataset is None:
+			dataset = self.database.keys()
+		rv = []
+		for card in dataset:
+			if re.search(rf'\b{pattern}\b', self.database[card]['type'], re.I):
+				rv.append(card)
+		return rv
+
+	def SearchByColor(self, pattern, dataset = None):
+		if dataset is None:
+			dataset = self.database.keys()
+		rv = []
+		for card in dataset:
+			if pattern in self.database[card]['manaCost']:
+				rv.append(card)
+		return rv
 
 	def SetCardQty(self, _event=None):
 		cn = self.set_qty_entry.get()
@@ -459,15 +622,23 @@ class Manager (tk.Frame):
 	def UpdateDisplay(self, dataset=None):
 		if dataset is None:
 			dataset = self.deck.mainboard
-
 		print ("UpdateDisplay: updating display...")
 		print ("UpdateDisplay: about to CrunchNumbers")
 		self.deck.CrunchNumbers(dataset=dataset)
-		self.ShowDeckList(dataset=dataset)
-		self.ShowCMCGraph()
-		self.ShowColorDistribution()
-		self.ShowTypeDistribution()
-		self.ShowSetCardQtyPanel()
+
+		# destroy the old frames
+		for widget in self.decklist_column.winfo_children():
+			widget.destroy()
+		for widget in self.deckstats_column.winfo_children():
+			widget.destroy()
+
+		# create and show new frames
+		self.SetupDeckListFrame(dataset=dataset)
+		self.SetupCMCGraph()
+		self.SetupColorDistribution()
+		self.SetupTypeDistributionFrame()
+		# self.SetupSearchResultsFrame()	commenting these out b/c i think we only need to update the displays about the deck
+		# self.SetupSetCardQtyPanel()
 
 
 
