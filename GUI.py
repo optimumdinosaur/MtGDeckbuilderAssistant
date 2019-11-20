@@ -267,7 +267,7 @@ class Manager (tk.Frame):
 		cmc_canvas = tk.Canvas(cmc_frame, width = c_width, height = c_height)
 		cmc_canvas.pack()
 		y_stretch = 10
-		y_gap = 5
+		y_gap = 12
 		x_stretch = 10
 		x_width = 16
 		x_gap = 8
@@ -277,7 +277,8 @@ class Manager (tk.Frame):
 			x1 = x0 + x_width
 			y1 = c_height - y_gap
 			cmc_canvas.create_rectangle(x0, y0, x1, y1, fill="orange")
-			cmc_canvas.create_text(x0+2, y0, anchor=tk.SW, text=str(y))
+			cmc_canvas.create_text(x0+3, y0, anchor=tk.SW, text=str(y))
+			cmc_canvas.create_text(x0+3, y1+1, anchor=tk.NW, text=str(x))
 
 	def SetupColorDistribution(self):
 		color_dist_frame = tk.LabelFrame(self.deckstats_column, text="Color Distribution", padx=3, pady=3)
