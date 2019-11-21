@@ -261,29 +261,53 @@ class Manager (tk.Frame):
 	def SetupCMCGraph(self):
 		cmc_frame = tk.LabelFrame(self.deckstats_column, text="Converted Mana Costs", padx=3, pady=3)
 		cmc_frame.pack(fill='both', expand=True)
-		# cmc_frame.grid(column=2, row=0, padx=5, pady=5, sticky='new')
-		c_width = 250
-		c_height = 200
+		c_width = 250 # width of the canvas
+		c_height = 200 # height of the canvas
 		cmc_canvas = tk.Canvas(cmc_frame, width = c_width, height = c_height)
 		cmc_canvas.pack()
-		y_stretch = 10
-		y_gap = 12
-		x_stretch = 10
-		x_width = 16
-		x_gap = 8
+
+		if len(self.deck.CMCCurve) == 0: # if the deck's empty don't bother displaying anything
+			return
+			
+		y_stretch = 10 # number of pixels bar is stretched for each card of that cmc
+		y_gap = 12 # gap between bottom of canvas and bottom of bars
+		x_gap = 10 # gap between bars
+		x_border = 8 # space between edge of canvas and bars	
+		len_of_curve = len(self.deck.CMCCurve)
+		if len(self.deck.CMCCurve) > 0 and self.deck.CMCCurve[0] == 0: # if there are spells but none at CMC=0
+			len_of_curve -= 1 # display one fewer bar
+		x_width = ((c_width - 2 * x_border) / len_of_curve) - x_gap
+		
+		chart_line_gap = 5 # gap between edge of canvas and endpoints of line
+		chart_line_start = x_border - chart_line_gap
+		
+		chart_line_end = len_of_curve * x_gap + len_of_curve * x_width + x_border + chart_line_gap
+		if self.deck.CMCCurve[0] > 0:
+			chart_line_end -= x_gap
+
+		chart_line_y = c_height - y_gap
+		cmc_canvas.create_line(chart_line_start, chart_line_y, chart_line_end, chart_line_y)
 		for x, y in enumerate(self.deck.CMCCurve):
-			x0 = x * x_stretch + x * x_width + x_gap
+			x0 = x * x_gap + x * x_width + x_border
+			if self.deck.CMCCurve[0] == 0:
+				x0 -= (x_width)
 			y0 = c_height - (y * y_stretch + y_gap)
 			x1 = x0 + x_width
-			y1 = c_height - y_gap
-			cmc_canvas.create_rectangle(x0, y0, x1, y1, fill="orange")
-			cmc_canvas.create_text(x0+3, y0, anchor=tk.SW, text=str(y))
-			cmc_canvas.create_text(x0+3, y1+1, anchor=tk.NW, text=str(x))
+			# y1 = chart_line_y
+			text_x = x0 + int(x_width / 2)
+			cmc_canvas.create_text(text_x, chart_line_y+1, anchor=tk.N, text=str(x), justify='center') # label for x-axis
+			if y == 0:
+				continue
+			cmc_canvas.create_rectangle(x0, y0, x1, chart_line_y, fill="orange") # the bar
+			cmc_canvas.create_text(text_x, y0, anchor=tk.S, text=str(y), justify='center') # label for bar
+
+
+
+
 
 	def SetupColorDistribution(self):
 		color_dist_frame = tk.LabelFrame(self.deckstats_column, text="Color Distribution", padx=3, pady=3)
 		color_dist_frame.pack(fill='both', expand=True)
-		# color_dist_frame.grid(column=2, row=1, padx=5, pady=3, sticky="wens")
 		
 		cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
 		land_cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
