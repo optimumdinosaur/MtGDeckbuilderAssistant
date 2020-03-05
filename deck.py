@@ -107,6 +107,7 @@ class Deck:
 			dataset=self.mainboard
 		self.CMCCurve = []
 		for card in dataset:
+			print (f"Deck.CalcCMCCurve: Looking at card, {card}....")
 			if "Land" not in card.type_line:
 				if len(self.CMCCurve) < card.cmc+1:
 					powerpole = [0] * (card.cmc - len(self.CMCCurve) + 1)
@@ -115,9 +116,9 @@ class Deck:
 		return self.CMCCurve
 
 
-	# creates and returns a dictionary containing data on the colors in the deck
+	# creates and returns a dictionary, self.color_dist, containing data on the colors in the deck
 	# keys are each color, as well as Colorless
-	# the values are a 3 element list. 
+	# the values are each a 3 element list 
 	# the first element is the number of cards of that color
 	# the second is the deck's total devotion to that color (how many times that mana symbol appears in the cost of each of card of the deck)
 	# the third is the number of lands that provide this color mana
@@ -139,13 +140,13 @@ class Deck:
 					pattern = ':.*{'+color+'}.*$'
 					if re.search(pattern, card.text, re.M):
 						self.color_dist[color][2] += self.mainboard[card]
-						self.total_land_devotion += self.mainboard[card]
-							
-
-		# print (f"Deck.GetColorDistribution: Color Distribution: {self.color_dist}")
-		# print (f"Deck.GetColorDistribution: Total Devotion: {self.total_devotion}")
+						self.total_land_devotion += self.mainboard[card]					
 		return self.color_dist
 
+	# creates and returns a dictionary, self.type_dist containing a count of each Type of card in the deck
+	# keys are each Type
+	# each value is the number of cards of that Type
+	# cards with multiple types add to the count for each of their types
 	def GetTypeDistribution(self, dataset=None):
 		if dataset is None:
 			dataset = self.mainboard
@@ -156,12 +157,15 @@ class Deck:
 					self.type_dist[t] += self.mainboard[c]
 		return self.type_dist
 
+	# creates and returns a Counter, self.creature_subtypes, containing the number of cards of each creature subtype in the deck
+	# keys are each creature subtype
+	# each value is the number of cards with that subtype
 	def GetCreatureSubtypes(self, dataset=None):
 		if dataset is None:
 			dataset = self.mainboard
 		self.creature_subtypes = Counter()
 		for card in dataset:
-			if "Creature" in card.type_line:
+			if "Creature" in card.type_line or "Tribal" in card.type_line:
 				card_subtypes = card.type_line[card.type_line.find('—'):].split()
 				for subtype in card_subtypes:
 					if '—' in subtype:
@@ -208,6 +212,7 @@ class Deck:
 				rv.append(card)
 		return rv
 
+	# returns a list of Cards with the pattern in their name
 	def SearchByName(self, pattern, dataset = None):
 		if dataset is None:
 			dataset = self.mainboard
@@ -239,7 +244,7 @@ class Deck:
 				rv.append(card)
 		return rv
 
-
+	# returns a list of Cards with the pattern Color in their mana cost
 	def SearchByColor(self, pattern, dataset = None):
 		rv = []
 		if dataset is None:
