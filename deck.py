@@ -9,6 +9,7 @@ class Deck:
 	def __init__(self, name = "", filepath=None, database=None):
 		self.name = name
 		self.mainboard = {}
+		self.image_dict = {}
 		if database is None:
 			print ("Deck.init: Loading database...")
 			database = MtGCardDBHandler.LoadCardDataBase()
@@ -109,6 +110,8 @@ class Deck:
 		for card in dataset:
 			print (f"Deck.CalcCMCCurve: Looking at card, {card}....")
 			if "Land" not in card.type_line:
+				if not hasattr(card, 'cmc'):
+					card.cmc = 0
 				if len(self.CMCCurve) < card.cmc+1:
 					powerpole = [0] * (card.cmc - len(self.CMCCurve) + 1)
 					self.CMCCurve.extend(powerpole)	

@@ -12,6 +12,7 @@ import urllib.parse
 import urllib.request
 import re
 import io
+import pickle
 
 recent_files_log_fp = 'mtgdbrecent.log'
 recent_files_log_length = 5
@@ -67,7 +68,14 @@ class Manager (tk.Frame):
 
 		filemenu.add_command(label="Save", command= lambda: self.SaveDeck(self.deck_filepath))
 		filemenu.add_command(label="Save As", command=self.SaveDeck)
+
 		filemenu.add_separator()
+
+		filemenu.add_command(label="Import", command=self.ImportDeck)
+		filemenu.add_command(label="Export", command=self.ExportDeck)
+
+		filemenu.add_separator()
+
 		filemenu.add_command(label="Exit", command=self.master.quit)
 		menubar.add_cascade(label="File", menu=filemenu)
 
@@ -263,22 +271,21 @@ class Manager (tk.Frame):
 		card_tooltip = TkTooltip(widget, str(card))
 		# first check if the card is already loaded in the card_image_dict
 		# loading images can take some time so we save them here once they're loaded
-		# the dict is cleared when the program closes
+		# the dict is cleared when the program closes but cards in the deck are saved with the deck
 		if card.name in self.card_image_dict.keys(): 
 			card_image = self.card_image_dict[card.name]
-			card_tooltip.image = card_image
+			card_tooltip.image = ImageTk.PhotoImage(card_image)
 		else: # if it's not in there look it up from gatherer by its multiverseId
 			try:
 				# create the image_url
 				url = f"https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid={card.multiverseId}&type=card"
 				# create the image
 				raw_data = urllib.request.urlopen(url).read()
-				im = Image.open(io.BytesIO(raw_data))
-				card_image = ImageTk.PhotoImage(im)
+				card_image = Image.open(io.BytesIO(raw_data))
 				# save the image to our card_image_dict in case we need it later
 				self.card_image_dict[card.name] = card_image
-				# assign that image to the card_tooltip
-				card_tooltip.image = card_image
+				# set the card's tooltip's image to the ImageTk
+				card_tooltip.image = ImageTk.PhotoImage(card_image)
 			except AttributeError:
 				# this shouldn't be happening anymore so this is bad
 				print (f"{card.name} has no multiverseId. Shit, dude.")
@@ -432,12 +439,14 @@ class Manager (tk.Frame):
 
 
 	# Called from the 'Load' option in the File Menu
+	# Looks for .mdk files created with the SaveDeck function, these are pickled Deck objects
 	def LoadDeck(self, filename=None):
 		if filename is None:
-			filename = tk.filedialog.askopenfilename(title="Choose file to open")
+			filename = tk.filedialog.askopenfilename(title="Choose file to open", filetypes=[('Magic DeckBuilder Decks', 'mdk')], defaultextension='mdk')
 		def fun():
 			self.deck_filepath = filename
-			print (f"LoadDeck: self.deck_filepath set to {self.deck_filepath}")
+	
+			# Edit the recent files log
 			recent_files = []
 			with open(self.recent_files_path, 'r') as rf_file:
 				for line in rf_file:
@@ -445,28 +454,67 @@ class Manager (tk.Frame):
 					if fp != filename:
 						recent_files.append(fp)
 				recent_files.insert(0, filename)
-			# close and reopen file to clear its contents
+			# close and reopen file to clear its contents 
 			with open(self.recent_files_path, 'w') as rf_file:
 				for rf in recent_files[:recent_files_log_length]:
 					rf_file.write(rf + '\n')
 
-			filedeck = Deck(filepath=filename, database=self.database)
-			self.deck = filedeck
+			# unpickle the deck
+			with open (filename, 'rb') as in_file:
+				self.deck = pickle.load(in_file)
+			# merge the Deck's image_dict with self.card_image_dict
+			self.card_image_dict = {**self.card_image_dict, **self.deck.image_dict}
+			# update the display to show the deck
 			self.UpdateDisplay()
 		return fun()
 
 
-	# Called from the 'Save' option in the File Menu
-	def SaveDeck(self, filename=None):
-		if filename is None:
-			filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as")
-			self.deck_filepath = filename
-			print (f"SaveDeck: self.deck_filepath set to {self.deck_filepath}")
-		with open(filename, 'w') as out_file:
-			# out_file.write(self.deck.to_string())
-			out_file.write(str(self.deck))
-		print (f"Deck saved to {filename}!")
+	# Called from the 'Import' option in the File Menu
+	# Looks for plain text files containing just the list of cards and their quantities
+	def ImportDeck(self, filename=None):
+		if filename	is None:
+			filename = tk.filedialog.askopenfilename(title="Choose file to import", defaultextension='txt')
+		# def fun():
+		
+		# create a Deck from the filepath and assign to the GUI's self.deck
+		self.deck = Deck(filepath=filename, database=self.database)
+		# upadte display teo show the deck
+		self.UpdateDisplay()
 
+
+	# Called from the 'Save' option in the File Menu
+	# Saves the whole Deck object including the images for its cards
+	def SaveDeck(self, filename=None):
+		if filename is None or filename == '':
+			# open a tkinter save as file dialog to select where to save the deck
+			filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as", filetypes=[('Magic DeckBuilder Decks', 'mdk'), ('All files', '*')], defaultextension=".mdk")
+			self.deck_filepath = filename
+		# fill the Deck's image_dict so that it can be saved in the file		
+		for card_name in self.card_image_dict: # self.card_image_dict uses just card names as keys
+			for card in self.deck.mainboard.keys(): # Deck mainboard uses Card objects as keys
+				if card_name == card.name:
+					self.deck.image_dict[card_name] = self.card_image_dict[card_name]
+		# pickle the Deck into the chosen filepath
+		with open (filename, 'wb') as out_file:
+			pickle.dump(self.deck, out_file)
+
+		# with open(filename, 'w') as out_file:
+		# 	# out_file.write(self.deck.to_string())
+		# 	out_file.write(str(self.deck))
+		
+		print (f"GUI.SaveDeck: Deck saved to {filename}!")
+
+	# Called from the 'Export' option in the File menu
+	# Saves the deck as plain text file with just the card names and their quantities like so:
+	def ExportDeck(self, filename=None):
+		if filename is None:
+			# open a tkinter save as file dialog to select where to export the deck to
+			filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as", defaultextension="txt")
+		# write the Deck to the file
+		with open (filename, 'w') as out_file:
+			out_file.write(str(self.deck)) 
+
+		print (f"GUI.ExportDeck: Deck exported to {filename}!")
 
 	# Called by hitting 'Enter' while in any of the Search entry boxes
 	def EntrySearch(self, other_param):
