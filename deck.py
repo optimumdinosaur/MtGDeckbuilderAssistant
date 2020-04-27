@@ -18,6 +18,7 @@ class Deck:
 			self.BuildFromFile(filepath)
 		print ("Deck.init: about to CrunchNumbers")
 		self.CrunchNumbers()
+		self.MakeDefaultSorts()
 
 	def CrunchNumbers(self, dataset=None):
 		if dataset is None:
@@ -28,40 +29,101 @@ class Deck:
 		self.GetTypeDistribution(dataset)
 		self.GetCreatureSubtypes(dataset)
 
-	def AddCard(self, Card):
-		try:
-			self.mainboard[Card] += 1
-		except KeyError:
-			self.mainboard[Card] = 1
+	def MakeDefaultSorts(self):
+		self.sorts = { "Type" : {}, "Color" : {}, "Converted Mana Cost" : {} }
+		for card in self.mainboard:
+			# Sort for Type
+			self.SortCardByType(card)
+			# Sort for Color
+			self.SortCardByColors(card)
+			# Sort for Converted Mana Cost
+			self.SortCardByCMC(card)
 
-	def RemoveCard(self, Card):
-		try:
-			self.mainboard[Card] -= 1
-			if self.mainboard[Card] <= 0:
-				del self.mainboard[Card]
-		except KeyError:
-			print ("Card already not in deck.")
+	def SortCardByType(self, card):
+		type_list = ['Creature', 'Artifact', 'Enchantment', 'Planeswalker', 'Instant', 'Sorcery', 'Land']
+		# look for Creature first so Artifact Creatures, Enchantment Creatures, and Land Creatures get sorted in there
+		for t in type_list:
+			if t in card.type_line:
+				if t not in self.sorts['Type']:
+					self.sorts['Type'][t] = Category(t)
+				self.sorts['Type'][t].add(card)
+				return # we're done here, no need to check other types
+
+	def SortCardByColors(self, card):
+		colors = set(card.colors)
+		if hasattr(card, 'other_half'): # if card has two spells on it
+			colors |= set(card.other_half.colors) # include the other half's colors
+
+		if len(colors) > 1: # if multicolor
+			if 'Multi' not in self.sorts['Color']:
+				self.sorts['Color']['Multi'] = Category('Multicolor')
+			self.sorts['Color']['Multi'].add(card)
+		elif len(colors) == 0: # if colorless
+			if 'Colorless' not in self.sorts['Color']:
+				self.sorts['Color']['Colorless'] = Category('Colorless')
+			self.sorts['Color']['Colorless'].add(card)
+		else: # the card is one color
+			color_list = ['White', 'Blue', 'Black', 'Red', 'Green']
+			for c in color_list: 
+				if c in colors: # if card is this Color
+					if c not in self.sorts['Color']: # if there's not already a Category for this Color
+						self.sorts['Color'][c] = Category(c) # create a Category for this Color
+					self.sorts['Color'][c].add(card) # add the Card to the Category for this Color
+					return # we're done here, no need to check other colors
+
+	def SortCardByCMC(self, card):
+		print (f"Deck.SortCardByCMC: looking at {card.name}")
+		cat_name = "Land / Nonspells" if card.cmc == -1 else str(card.cmc)
+		print (f"Deck.SortCardByCMC: {card.name}'s cat_name: {cat_name}")
+		if cat_name not in self.sorts['Converted Mana Cost']:
+			self.sorts['Converted Mana Cost'][cat_name] = Category(cat_name)
+			print (f"Deck.SortCardByCMC: Created new Category for {cat_name}")
+		
+		self.sorts['Converted Mana Cost'][cat_name].add(card)
+		print (f"Deck.SortCardByCMC: {card.name} added to {cat_name} Category")
+
 
 	def SetCardQuantity(self, cardname, qty):
 		print (f"Setting card quantity for card, {cardname}, to {qty}...")
-		for card in self.mainboard:
-			# print (f"Checking card, {card.name}")
-			if re.match(cardname, card.name, re.I):
-				self.mainboard[card] = qty
-				if int(qty) <= 0:
-					del self.mainboard[card]
-				return
+		card = Card(cardname, database=self.database)
+		# if card is in deck already
+		if card in self.mainboard:
+			if qty <= 0:
+				print (f"Removing {card.name} from mainboard...")
+				# remove the card from mainboard
+				del self.mainboard[card]
+				print (f"Card removed from mainboard!")
+				# remove card from sorts
+				print (f"Removing {card.name} from sorts...")
+				for sort in self.sorts:
+					for category in self.sorts[sort]:
+						if card in self.sorts[sort][category].cards:
+							self.sorts[sort][category].remove(card)
+							print (f"Deck.SetCardQuantity: {card.name} removed from {category} in {sort}")
 
-		if qty >= 1:
-			c = Card(cardname, database=self.database)
-			if hasattr(c, 'name'):
-				self.mainboard[c] = qty
-				print ("Card quantity set.")
-			else:
-				print ("Card quantity not set, name not found. ")
+						# try:
+						# 	del sort[category][card]
+						# 	print (f"Deck.SetCardQuantity: {card.name} removed from {category} in {sort}")
+						# 	break # out of this particular sort's loop; it won't be in another category
+						# except:
+						# 	pass # not in this category, moving on
+			else: # qty is above 0
+				self.mainboard[card] = qty
+				print (f"Deck.SetCardQuantity: {card.name} quantity set to {self.mainboard[card]}")
+				# since it's already in the Deck it should be sorted
+		else: # card is not already in deck
+			if qty <= 0:
+				print (f"Deck.SetCardQuantity: {card.name} already not in deck. No need to set its quantity to {qty}")
+			else: # qty is above 0
+				self.mainboard[card] = qty
+				# sort the card, just the default sorts for now: Type and Colors
+				self.SortCardByType(card)
+				self.SortCardByColors(card)
+				self.SortCardByCMC(card)
+
+
 
 	def __str__(self):
-		# ret_val = f"Deck: {self.name}\n"
 		ret_val = ""
 		for c in self.mainboard:
 			ret_val += (f"{self.mainboard[c]} {c.name}\n")
@@ -108,7 +170,6 @@ class Deck:
 			dataset=self.mainboard
 		self.CMCCurve = []
 		for card in dataset:
-			print (f"Deck.CalcCMCCurve: Looking at card, {card}....")
 			if "Land" not in card.type_line:
 				if not hasattr(card, 'cmc'):
 					card.cmc = 0
@@ -256,3 +317,32 @@ class Deck:
 			if pattern in card.mana_cost:
 				rv.append(card)
 		return rv
+
+
+# stores a group of cards to be put together into a sort
+class Category:
+	def __init__(self, name=""):
+		self.name = name
+		self.cards = set()
+
+	def __len__(self):
+		return len(self.cards)
+	
+	def add(self, card):
+		self.cards.add(card)
+
+	def remove(self, card):
+		self.cards.remove(card)
+
+	def __str__(self):
+		return f"{self.name}: {str(self.cards)}"
+
+	def __hash__(self):
+		return hash(str(self))
+
+	# these should really be look at the cards too but I'll worry about that later
+	def __eq__(self, other):
+		return (self.name == other.name)
+
+	def __ne__(self, other):
+		return (self.name != other.name)

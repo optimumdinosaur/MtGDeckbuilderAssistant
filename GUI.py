@@ -31,15 +31,30 @@ class Manager (tk.Frame):
 		self.deck = deck
 
 		self.card_image_dict = {} # dictionary for storing images of cards that'll be used more than once
-
 		self.SetupMenuBar()
 
+
+		# for a deck title frame above everything else we'll need to do a main_frame and top_frame
+		top_frame = tk.Frame(self)
+		main_frame = tk.Frame(self)
+		top_frame.pack(fill="both", expand=True)
+		main_frame.pack(fill="both", expand=True)
+
+
+		# setup display for Deck's name
+		self.deck_name_frame = tk.LabelFrame(top_frame, text="Deck Name")
+		self.deck_name_frame.pack(fill="both", expand=True, padx=3, pady=3)
+		self.deck_name_var = tk.StringVar()
+		deck_name_label = tk.Label(self.deck_name_frame, textvariable=self.deck_name_var)
+		deck_name_label.pack()
+
+
 		# Arrange the 3 main parent frames that will contain the actual data displays
-		self.decklist_column = tk.Frame(self)
+		self.decklist_column = tk.Frame(main_frame)
 		self.decklist_column.pack(side='left', fill='both', expand=True, padx=3, pady=3)
-		self.deckstats_column = tk.Frame(self)
+		self.deckstats_column = tk.Frame(main_frame)
 		self.deckstats_column.pack(side='left', fill='both', expand=True, padx=3, pady=3)
-		self.search_column = tk.Frame(self)
+		self.search_column = tk.Frame(main_frame)
 		self.search_column.pack(side='left', fill='both', expand=True, padx=3, pady=3)
 
 		# Setup the inner frames that actually show the data
@@ -199,72 +214,120 @@ class Manager (tk.Frame):
 	# Creates and packs the Search Results Frame
 	def SetupSearchResultsFrame(self):
 		search_results_master_frame = tk.LabelFrame(self.search_column, text="Search Results", padx=3, pady=3)
-		search_results_master_frame.pack(fill='both')
+		search_results_master_frame.pack(fill='both', expand=True)
 		self.search_results_frame = VerticalScrolledFrame(search_results_master_frame)
 		self.search_results_frame.pack(fill="both", expand=True)
 
 
-	# Creates, packs, and sets up the Decklist Display Frame
+
+	# Initial setup for DeckList Frame
 	def SetupDeckListFrame(self, dataset=None):
+		if not hasattr(self.deck, 'sorts'): # if Deck doesn't have its cards sorted yet
+			self.deck.MakeDefaultSorts() # make the default sorts
 
-		if dataset is None:
-			dataset = self.deck.mainboard
-
-		self.decklist_frame = tk.LabelFrame(self.decklist_column, text="DeckList", padx=3, pady=3)
-		self.decklist_frame.pack(fill='both', expand=True)
+		self.decklist_frame = tk.LabelFrame(self.decklist_column, text="Decklist")
+		self.decklist_frame.pack(fill="both", expand=True)
 
 		num_cards_lbl = tk.Label(self.decklist_frame, text=f"Total Number of Cards: {self.deck.card_count}")
+		num_cards_lbl.pack(anchor='w')
 
-		creature_frame = tk.LabelFrame(self.decklist_frame, text=f"Creatures ({self.deck.type_dist['Creature']})", padx=2, pady=2)
-		nc_frame = tk.Frame(self.decklist_frame, padx=2, pady=2) # noncreature frame
-		artifact_frame = tk.LabelFrame(nc_frame, text=f"Artifacts ({self.deck.type_dist['Artifact']})", padx=2, pady=2) 
-		ench_frame = tk.LabelFrame(nc_frame, text=f"Enchantments ({self.deck.type_dist['Enchantment']})", padx=2, pady=2)
-		pw_frame = tk.LabelFrame(nc_frame, text=f"Planeswalkers ({self.deck.type_dist['Planeswalker']})", padx=2, pady=2)
-		instant_frame = tk.LabelFrame(nc_frame, text=f"Instants ({self.deck.type_dist['Instant']})", padx=2, pady=2)
-		sorcery_frame = tk.LabelFrame(nc_frame, text=f"Sorceries ({self.deck.type_dist['Sorcery']})", padx=2, pady=2)
-		land_frame = tk.LabelFrame(nc_frame, text=f"Lands ({self.deck.type_dist['Land']})", padx=2, pady=2)
-		self.cqty_sboxes = {}
-		for card in dataset:
-			if "Artifact" in card.type_line:
-				mstr = artifact_frame
-			if "Enchantment" in card.type_line:
-				mstr = ench_frame
-			if "Instant" in card.type_line:
-				mstr = instant_frame
-			if "Sorcery" in card.type_line:
-				mstr = sorcery_frame
-			if "Planeswalker" in card.type_line:
-				mstr = pw_frame
-			if "Creature" in card.type_line:
-				mstr = creature_frame
-			if "Land" in card.type_line:
-				mstr = land_frame
+		self.decklist_notebook = ttk.Notebook(self.decklist_frame)
+		self.decklist_notebook.pack(anchor='nw', fill='both', expand=True)
 
-			card_frame = tk.Frame(master = mstr)
-			card_label = tk.Label(master = card_frame, text=f"{card.name} - {card.mana_cost}")
-			card_label.grid(row=0, column=1)
-			
+		self.card_sbox_qty = {} # dictionary that stores IntVars tied to each Card's Spinbox
+		for card in self.deck.mainboard:
+			self.card_sbox_qty[card.name] = tk.IntVar(value=self.deck.mainboard[card])	
 
-			self.CreateCardTooltip(card_label, card)
+		for sort in self.deck.sorts:
+			tab = tk.Frame(self.decklist_notebook)
+			self.decklist_notebook.add(tab, text=sort)
 
-			qty_var = tk.IntVar(value = self.deck.mainboard[card]) # IntVar for the card's Spinbox
-			to_value = 60 if 'Basic' in card.type_line else 4 	# set max qty to 4 unless card is a basic land
-			self.cqty_sboxes[card.name] = tk.Spinbox(master = card_frame, width=3, textvariable = qty_var, from_ = 0, to = to_value, 
-													 command = lambda n=card.name: self.ChangeQtySpinbox(n))
-			self.cqty_sboxes[card.name].grid(row=0, column=0)
+			num_columns = 2
+			each_columns_list = [] # a list of each column's list of Categories
+			total_cards_shown = sum([len(self.deck.sorts[sort][category]) for category in self.deck.sorts[sort]])
 
-			card_frame.pack(anchor="w")
+			# the maximum number of Cards displayed in each column - the total cards divided by number of columns, rounded up
+			cards_per_column = total_cards_shown // num_columns + (total_cards_shown % num_columns > 0)
+			categories_to_arrange = list(self.deck.sorts[sort].values()) # list of Categories left to arrange into columns
+			for i in range(num_columns):
+				column_categories = [] # the Categories to be displayed in this column
+				if i == num_columns-1: # if this is the last column
+					# put the remaining categories in this column
+					column_categories = categories_to_arrange
+				else:
+					# use recursive functions to find how much we can fill the column and which Categories to use to do that
+					n = len(categories_to_arrange) # number of Categories to sort
+					c = cards_per_column # capacity of each column
+					combos = [ [0] * (c+1) for _ in range(n+1) ] # 2d array that tracks combinations of n and c
+					# there's no dummy value at the beginning so the function will look at categories_to_arrange[n-1] to get the real nth category
+					# print (f"GUI.SetupDeckListFrame: About to do some recursive shit. Here's the values of the n:{n} and c:{c}")
+					# function to fill the column as much as possible with Cards
+					def fill_column (n, c): 
+						if combos[n][c]: # value of combo already found
+							return combos[n][c]
+						if n == 0 or c == 0: # no Categories or capacity left to sort
+							result = 0
+						elif len(categories_to_arrange[n-1]) > c: # category has too many cards to fit in capacity
+							result = fill_column(n-1, c) # result is the previous value with the previous item
+						else: # category will fit in this space
+							# we have two choices: include it or don't
+							choiceA = len(categories_to_arrange[n-1]) + fill_column(n-1, c - len(categories_to_arrange[n-1]))  # value of this category plus whatever will fit in the remaining space
+							choiceB = fill_column(n-1, c) # last found value
+							result = max(choiceA, choiceB)
+						combos[n][c] = result
+						return result
+					# function to find which Categories were used to fill that column
+					def check_inclusion (n, c):
+						if n == 0 or c == 0:
+							return
+						n_val = len(categories_to_arrange[n-1]) + combos[n-1][c-len(categories_to_arrange[n-1])] # the number of cards that would be shown if the nth category is included
+						if combos[n][c] == n_val: # if this category is included
+							column_categories.append(categories_to_arrange[n-1]) # add this category to this column's group
+							check_inclusion(n-1, c-len(categories_to_arrange[n-1])) # check if the next one can be included with the capacity reduced by the size of this category
+						else: # if this category is not included
+							check_inclusion(n-1, c) # check the next one
 
-		num_cards_lbl.grid(column=0, row=0)
-		creature_frame.grid(column=0, row=1)
-		nc_frame.grid(column=1, row=1)
+					# call the functions, which will fill the column_categories list
+					fill_column(n, c)
+					check_inclusion(n, c)
+					# remove the used Categories from categories_to_arrange
+					for category in column_categories:
+						categories_to_arrange.remove(category)
 
-		artifact_frame.pack(anchor="w")
-		ench_frame.pack(anchor="w")
-		pw_frame.pack(anchor="w")
-		instant_frame.pack(anchor="w")
-		sorcery_frame.pack(anchor="w")
-		land_frame.pack(anchor="w")
+				# regardless of which column it is, we need to add its list to each_columns_list
+				each_columns_list.append(column_categories)
+
+			# display each group of Categories in a separate column
+			for column in each_columns_list:
+				col_frame = tk.Frame(tab)
+				col_frame.pack(side='left', padx=2, pady=5, anchor='nw', fill='both', expand=True)
+				for category in column:
+					category_frame = tk.LabelFrame(col_frame, text=category.name) # LabelFrame for each Category - this'll need to change so the parent is the Category's column
+					category_frame.pack(anchor='w')
+					# sorted_cards = sorted(self.deck.sorts[sort][category].cards, key=lambda card: card.cmc) # sort cards by cmc
+					sorted_cards = sorted(category.cards, key=lambda card: card.cmc) # sort cards by cmc
+					for card in sorted_cards:
+						self.SetupCardDisplay(card, category_frame)
+
+
+
+
+ 	# Creates the frame and junk to display one Card in the Decklist frame
+	def SetupCardDisplay(self, card, parent_frame):
+		card_frame = tk.Frame(master = parent_frame)
+		card_label = tk.Label(master = card_frame, text=f"{card.name} - {card.mana_cost}")
+		card_label.grid(row=0, column=1)
+		
+		# Create a tooltip that's shown when cursor is over the Label
+		self.CreateCardTooltip(card_label, card)
+
+		# set up spinboxes for each Card's quantity
+		to_value = 60 if 'Basic' in card.type_line else 4 	# set max qty to 4 unless card is a basic land
+		sbox = tk.Spinbox(master=card_frame, width=3, textvariable=self.card_sbox_qty[card.name], from_=0, to=to_value, command= lambda n=card.name: self.ChangeQtySpinbox(n))
+		sbox.grid(row=0, column=0)
+
+		card_frame.pack(anchor="w")
+
 
 	# Creates a tooltip for a Card object on the widget
 	def CreateCardTooltip(self, widget, card):
@@ -280,20 +343,22 @@ class Manager (tk.Frame):
 				# create the image_url
 				url = f"https://gatherer.wizards.com/Handlers/Image.ashx?multiverseid={card.multiverseId}&type=card"
 				# create the image
+				print (f"Pulling image for {card.name}...")
 				raw_data = urllib.request.urlopen(url).read()
 				card_image = Image.open(io.BytesIO(raw_data))
 				# save the image to our card_image_dict in case we need it later
 				self.card_image_dict[card.name] = card_image
 				# set the card's tooltip's image to the ImageTk
 				card_tooltip.image = ImageTk.PhotoImage(card_image)
-			except AttributeError:
-				# this shouldn't be happening anymore so this is bad
-				print (f"{card.name} has no multiverseId. Shit, dude.")
+				print (f"Card image downloaded and saved to card_image_dict.")
+			except:
+				# this shouldn't be happening anymore so this is bad, unless you're offline - then it makes sense
+				print (f"Couldn't pull image for {card.name}")
 
 
 	# Called when a spinbox in the decklist display is changed
 	def ChangeQtySpinbox(self, cardname):
-		qty = self.cqty_sboxes[cardname].get()
+		qty = self.card_sbox_qty[cardname].get()
 		print ("**Spinbox changed for cardname, " + cardname + " to " + str(qty) + "**")
 		self.deck.SetCardQuantity(cardname, int(qty))
 		self.UpdateDisplay()
@@ -440,7 +505,7 @@ class Manager (tk.Frame):
 
 	# Called from the 'Load' option in the File Menu
 	# Looks for .mdk files created with the SaveDeck function, these are pickled Deck objects
-	def LoadDeck(self, filename=None):
+	def LoadDeck(self, filename=None, _event=None):
 		if filename is None:
 			filename = tk.filedialog.askopenfilename(title="Choose file to open", filetypes=[('Magic DeckBuilder Decks', 'mdk')], defaultextension='mdk')
 		def fun():
@@ -465,6 +530,8 @@ class Manager (tk.Frame):
 			# merge the Deck's image_dict with self.card_image_dict
 			self.card_image_dict = {**self.card_image_dict, **self.deck.image_dict}
 			# update the display to show the deck
+						
+			self.UpdateDeckTitle(filename[ filename.rfind("/")+1 : filename.rfind(".") ])
 			self.UpdateDisplay()
 		return fun()
 
@@ -479,7 +546,11 @@ class Manager (tk.Frame):
 		# create a Deck from the filepath and assign to the GUI's self.deck
 		self.deck = Deck(filepath=filename, database=self.database)
 		# upadte display teo show the deck
+		self.UpdateDeckTitle(filename[ filename.rfind("/")+1 : filename.rfind(".") ])
 		self.UpdateDisplay()
+
+	def UpdateDeckTitle(self, name_str):
+		self.deck_name_var.set(name_str)
 
 
 	# Called from the 'Save' option in the File Menu
@@ -672,7 +743,7 @@ class Manager (tk.Frame):
 	# 'C' - Converted Mana Cost, 'P' - Power, 'T' - Toughness
 	def SearchByValueComparison(self, cproperty, value, comparison, dataset=None):
 		if dataset is None:
-			datset = self.database.keys()
+			dataset = self.database.keys()
 		def EqualTo(card_value, comp_value):
 			return (card_value == comp_value)
 		def LessThan(card_value, comp_value):
@@ -751,10 +822,10 @@ class Manager (tk.Frame):
 
 	# Called by Quick Add button and entry keybinding
 	def SetCardQty(self, _event=None):
-		cn = self.set_qty_entry.get()
-		print ("Setting card qty for card: " + cn)
-		if cn:
-			self.deck.SetCardQuantity(cn, int(self.set_qty_amt.get()))				
+		card_name = self.set_qty_entry.get()
+		print ("Setting card qty for card: " + card_name)
+		if card_name:
+			self.deck.SetCardQuantity(card_name, int(self.set_qty_amt.get()))				
 			self.UpdateDisplay()
 			self.set_qty_entry.delete(0, 'end')
 			

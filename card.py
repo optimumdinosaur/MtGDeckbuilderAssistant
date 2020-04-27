@@ -8,15 +8,15 @@ class Card:
 		self.cmc = 0
 		self.mana_cost = ""
 		self.colors = []
+		self.color_id = set()
 		self.type_line = ""
 		self.text = ""
 
 	def __init__(self, nm, database=None):
 		if database is None:
-			print ("Card.init: Loading database. !!! This is not the thing that should be loading database !!!")
+			print ("Card.init: Loading database. !!! This is not the thing that should be loading the database !!!")
 			# not sure why this is still an option honestly
 			database = MtGCardDBHandler.LoadCardDataBase()
-		# print (f"nm - {nm}")
 		try:
 			card_data = database[nm]
 		except KeyError:
@@ -26,6 +26,8 @@ class Card:
 		self.colors = card_data['colors']
 		if 'convertedManaCost' in card_data:
 			self.cmc = int(card_data['convertedManaCost'])
+		else:
+			self.cmc = -1 # this way it still has a numerical value for sorting stuff
 		if "names" in card_data:
 			self.names = card_data["names"]
 			self.layout = card_data["layout"]
@@ -57,7 +59,10 @@ class Card:
 		if 'multiverse_id' in card_data:
 			self.multiverseId = card_data['multiverse_id']
 
+
 		print ("Card created with name: " + nm)
+
+
 
 	def __str__(self):
 		ret_val = f"{self.name}: {self.mana_cost if 'Land' not in self.type_line else ''} {self.type_line} \n{self.text}"
@@ -73,3 +78,12 @@ class Card:
 	def str_short(self):
 		ret_val = f"{self.name} - {self.mana_cost}"
 		return ret_val
+
+	def __eq__(self, other):
+		return (self.name == other.name)
+
+	def __ne__(self, other):
+		return (self.name != other.name)
+
+	def __hash__(self):
+		return hash(str(self))
