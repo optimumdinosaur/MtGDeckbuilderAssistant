@@ -94,6 +94,12 @@ class Manager (tk.Frame):
 		filemenu.add_command(label="Exit", command=self.master.quit)
 		menubar.add_cascade(label="File", menu=filemenu)
 
+
+		editmenu = tk.Menu(menubar, tearoff=0)
+		editmenu.add_command(label="Make Default Sorts", command=self.MakeDefaultSorts)
+		menubar.add_cascade(label="Edit", menu=editmenu)
+
+
 		self.master.config(menu=menubar)
 
 
@@ -211,7 +217,7 @@ class Manager (tk.Frame):
 		self.search_database_cbox.grid(row=8, column=5, padx=1, pady=1, columnspan=2)
 
 
-	# Creates and packs the Search Results Frame
+	# Creates and packs the Search Results Frame for showing results from Database
 	def SetupSearchResultsFrame(self):
 		search_results_master_frame = tk.LabelFrame(self.search_column, text="Search Results", padx=3, pady=3)
 		search_results_master_frame.pack(fill='both', expand=True)
@@ -587,6 +593,14 @@ class Manager (tk.Frame):
 
 		print (f"GUI.ExportDeck: Deck exported to {filename}!")
 
+
+	def MakeDefaultSorts(self):
+		print ("Manager.MakeDefaultSorts: Making the default sorts for current deck...")
+		self.deck.MakeDefaultSorts()
+		self.UpdateDisplay()
+		print ("Manager.MakeDefaultSorts: Default sorts made. Display updated.")
+
+
 	# Called by hitting 'Enter' while in any of the Search entry boxes
 	def EntrySearch(self, other_param):
 		print (f"Manager.EntrySearch: other_param: {other_param}")
@@ -696,7 +710,25 @@ class Manager (tk.Frame):
 
 		# If we searched the decklist
 		if self.search_deck_cbox_var.get():
-			self.UpdateDisplay(list(decklist_final_results))
+			
+			
+			# self.UpdateDisplay(list(decklist_final_results)) # this is important because it crunches the numbers for the results
+			
+
+			# here we can make a new tab in the decklist Notebook and put the results there, sorted only by CMC
+			results_frame = tk.Frame(self.decklist_notebook)
+			self.decklist_notebook.add(results_frame, text="Search Results")
+			self.decklist_notebook.select(results_frame)
+
+			sorted_cards = sorted(list(decklist_final_results), key=lambda card: card.cmc) # sort results by CMC
+			for card in sorted_cards:
+				self.SetupCardDisplay(card, results_frame)
+
+
+			# make the button that removes this tab
+			tk.Button(results_frame, text="Remove this tab", command=self.RemoveSearchResultsTab).pack(anchor='ne', padx=3,pady=3)
+
+
 			print ("Manager.Search: display updated")
 
 		# If we searched the database
@@ -711,6 +743,14 @@ class Manager (tk.Frame):
 				b = ttk.Button(self.search_results_frame.interior, text=c.str_short(), command=lambda card_name = c.name: self.set_add_card_entry(card_name))
 				b.pack(side='bottom', fill='x')
 				self.CreateCardTooltip(b, c)
+
+
+	# Function called by the button in Search Results frames
+	# removes the current tab from the Decklist display 
+	def RemoveSearchResultsTab(self):
+		print ("Manager.RemoveSearchResultsTab: Removing results tab...")
+		self.decklist_notebook.forget("current")
+		print ("Manager.RemoveSearchResultsTab: Tab should be removed now.")
 
 
 	# Function to search a card database by card names
