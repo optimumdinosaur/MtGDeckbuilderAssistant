@@ -244,8 +244,6 @@ class Manager (tk.Frame):
 		for card in self.deck.mainboard:
 			self.card_sbox_qty[card.name] = tk.IntVar(value=self.deck.mainboard[card])	
 				
-
-
 		for sort in self.deck.sorts:
 			tab = tk.Frame(self.decklist_notebook)
 			self.decklist_notebook.add(tab, text=sort)
@@ -287,7 +285,6 @@ class Manager (tk.Frame):
 					check_inclusion(n-1, c) # check the next one
 
 
-
 			for i in range(num_columns):
 				column_categories = []
 				if i == num_columns-1: # if it's the last column
@@ -308,8 +305,7 @@ class Manager (tk.Frame):
 								break # out of this for loop - done looking at categories for this column
 							else:
 								column_categories.append(category) # haven't reached capacity yet, safe to keep adding
-
-					else:
+					else: # not the CMC sort
 						# sort Categories into columns as evenly as possible
 						n = len(categories_to_arrange) # number of Categories left to sort
 						c = cards_per_column # capacity of each column
@@ -322,7 +318,6 @@ class Manager (tk.Frame):
 						categories_to_arrange.remove(category)
 				# regardless of which column it is add it to the list
 				each_columns_list.append(column_categories)
-
 
 			# display each group of Categories in a separate column
 			for column in each_columns_list:
@@ -739,7 +734,8 @@ class Manager (tk.Frame):
 			for card in sorted_cards:
 				self.SetupCardDisplay(card, results_frame)
 
-			tk.Button(results_frame, text="Remove this tab", command=self.RemoveSearchResultsTab).pack(anchor='ne', padx=3,pady=3)
+			ttk.Button(results_frame, text="Crunch these numbers", command=lambda search_results=sorted_cards: self.CrunchSearchResults(search_results)).pack(anchor='ne', padx=3,pady=3)
+			ttk.Button(results_frame, text="Remove this tab", command=self.RemoveSearchResultsTab).pack(anchor='ne', padx=3,pady=3)
 			print ("Manager.Search: display updated")
 
 		# If we searched the database
@@ -754,6 +750,21 @@ class Manager (tk.Frame):
 				b = ttk.Button(self.search_results_frame.interior, text=c.str_short(), command=lambda card_name = c.name: self.set_add_card_entry(card_name))
 				b.pack(side='bottom', fill='x')
 				self.CreateCardTooltip(b, c)
+
+	# Function called by the button in Search Results frames
+	# crunches the numbers using only the Cards from search results and displays the info in the graphs
+	def CrunchSearchResults(self, dataset):
+		# actually crunch the numbers
+		self.deck.CrunchNumbers(dataset=dataset)
+
+		# remove the old widgets 
+		for widget in self.deckstats_column.winfo_children():
+			widget.destroy()
+
+		# create new ones with the newly crunched numbers
+		self.SetupCMCGraph()
+		self.SetupColorDistribution()
+		self.SetupTypeDistributionFrame()
 
 
 	# Function called by the button in Search Results frames
