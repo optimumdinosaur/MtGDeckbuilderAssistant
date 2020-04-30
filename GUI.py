@@ -97,6 +97,7 @@ class Manager (tk.Frame):
 
 		editmenu = tk.Menu(menubar, tearoff=0)
 		editmenu.add_command(label="Make Default Sorts", command=self.MakeDefaultSorts)
+		editmenu.add_command(label="Reset Deck Statistics Display", command=self.ResetDeckStatsDisplay)
 		menubar.add_cascade(label="Edit", menu=editmenu)
 
 
@@ -608,6 +609,20 @@ class Manager (tk.Frame):
 			out_file.write(str(self.deck)) 
 
 		print (f"GUI.ExportDeck: Deck exported to {filename}!")
+
+
+
+	def ResetDeckStatsDisplay(self):
+		print ("Manager.ResetDeckStatsDisplay: Resetting the deck stats display...")
+		self.deck.CrunchNumbers()
+
+		for widget in self.deckstats_column.winfo_children():
+			widget.destroy()
+
+		self.SetupCMCGraph()
+		self.SetupColorDistribution()
+		self.SetupTypeDistributionFrame()
+		print ("Manager.ResetDeckStatsDisplay: Deck stats display reset.")
 
 
 	def MakeDefaultSorts(self):
