@@ -243,65 +243,86 @@ class Manager (tk.Frame):
 		self.card_sbox_qty = {} # dictionary that stores IntVars tied to each Card's Spinbox
 		for card in self.deck.mainboard:
 			self.card_sbox_qty[card.name] = tk.IntVar(value=self.deck.mainboard[card])	
+				
+
 
 		for sort in self.deck.sorts:
 			tab = tk.Frame(self.decklist_notebook)
 			self.decklist_notebook.add(tab, text=sort)
 
-			num_columns = 2
+			num_columns = 2 # number of columns to display Cards in
 			each_columns_list = [] # a list of each column's list of Categories
 			total_cards_shown = sum([len(self.deck.sorts[sort][category]) for category in self.deck.sorts[sort]])
 
 			# the maximum number of Cards displayed in each column - the total cards divided by number of columns, rounded up
 			cards_per_column = total_cards_shown // num_columns + (total_cards_shown % num_columns > 0)
-			categories_to_arrange = list(self.deck.sorts[sort].values()) # list of Categories left to arrange into columns
-			for i in range(num_columns):
-				column_categories = [] # the Categories to be displayed in this column
-				if i == num_columns-1: # if this is the last column
-					# put the remaining categories in this column
-					column_categories = categories_to_arrange
-				else:
-					# use recursive functions to find how much we can fill the column and which Categories to use to do that
-					n = len(categories_to_arrange) # number of Categories to sort
-					c = cards_per_column # capacity of each column
-					combos = [ [0] * (c+1) for _ in range(n+1) ] # 2d array that tracks combinations of n and c
-					# there's no dummy value at the beginning so the function will look at categories_to_arrange[n-1] to get the real nth category
-					# print (f"GUI.SetupDeckListFrame: About to do some recursive shit. Here's the values of the n:{n} and c:{c}")
-					# function to fill the column as much as possible with Cards
-					def fill_column (n, c): 
-						if combos[n][c]: # value of combo already found
-							return combos[n][c]
-						if n == 0 or c == 0: # no Categories or capacity left to sort
-							result = 0
-						elif len(categories_to_arrange[n-1]) > c: # category has too many cards to fit in capacity
-							result = fill_column(n-1, c) # result is the previous value with the previous item
-						else: # category will fit in this space
-							# we have two choices: include it or don't
-							choiceA = len(categories_to_arrange[n-1]) + fill_column(n-1, c - len(categories_to_arrange[n-1]))  # value of this category plus whatever will fit in the remaining space
-							choiceB = fill_column(n-1, c) # last found value
-							result = max(choiceA, choiceB)
-						combos[n][c] = result
-						return result
-					# function to find which Categories were used to fill that column
-					def check_inclusion (n, c):
-						if n == 0 or c == 0:
-							return
-						n_val = len(categories_to_arrange[n-1]) + combos[n-1][c-len(categories_to_arrange[n-1])] # the number of cards that would be shown if the nth category is included
-						if combos[n][c] == n_val: # if this category is included
-							column_categories.append(categories_to_arrange[n-1]) # add this category to this column's group
-							check_inclusion(n-1, c-len(categories_to_arrange[n-1])) # check if the next one can be included with the capacity reduced by the size of this category
-						else: # if this category is not included
-							check_inclusion(n-1, c) # check the next one
 
-					# call the functions, which will fill the column_categories list
-					fill_column(n, c)
-					check_inclusion(n, c)
-					# remove the used Categories from categories_to_arrange
+			categories_to_arrange = list(self.deck.sorts[sort].values()) # list of Categories left to arrange into columns
+			
+			# recursive functions used to arrange Categories evenly into columns
+			# function to fill the column as much as possible with Cards
+			def fill_column (n, c): 
+				if combos[n][c]: # value of combo already found
+					return combos[n][c]
+				if n == 0 or c == 0: # no Categories or capacity left to sort
+					result = 0
+				elif len(categories_to_arrange[n-1]) > c: # category has too many cards to fit in capacity
+					result = fill_column(n-1, c) # result is the previous value with the previous item
+				else: # category will fit in this space
+					# we have two choices: include it or don't
+					choiceA = len(categories_to_arrange[n-1]) + fill_column(n-1, c - len(categories_to_arrange[n-1]))  # value of this category plus whatever will fit in the remaining space
+					choiceB = fill_column(n-1, c) # last found value
+					result = max(choiceA, choiceB)
+				combos[n][c] = result
+				return result
+			# function to find which Categories were used to fill that column
+			def check_inclusion (n, c):
+				if n == 0 or c == 0:
+					return
+				n_val = len(categories_to_arrange[n-1]) + combos[n-1][c-len(categories_to_arrange[n-1])] # the number of cards that would be shown if the nth category is included
+				if combos[n][c] == n_val: # if this category is included
+					column_categories.append(categories_to_arrange[n-1]) # add this category to this column's group
+					check_inclusion(n-1, c-len(categories_to_arrange[n-1])) # check if the next one can be included with the capacity reduced by the size of this category
+				else: # if this category is not included
+					check_inclusion(n-1, c) # check the next one
+
+
+
+			for i in range(num_columns):
+				column_categories = []
+				if i == num_columns-1: # if it's the last column
+					column_categories = categories_to_arrange
+				else: # if it's not the last column
+					if sort == "Converted Mana Cost":
+						# sort Categories by ascending CMC
+						# first need to sort categories_to_arrange by CMC which is their names, other than Land/Nonspells which I want last anyway
+						categories_to_arrange = sorted(categories_to_arrange, key=lambda category: category.name)
+						ncs = 0 # number of cards shown
+						for category in categories_to_arrange:
+							ncs += len(category)
+							if ncs > cards_per_column:
+								diff_include = ncs - cards_per_column # difference between cards_per_column and cards shown if category is included
+								diff_not = cards_per_column - (ncs - len(category)) # difference if it is not included
+								if diff_include < diff_not: # if including category gets number of cards shown closer to cards_per_column
+									column_categories.append(category) # then it is included
+								break # out of this for loop - done looking at categories for this column
+							else:
+								column_categories.append(category) # haven't reached capacity yet, safe to keep adding
+
+					else:
+						# sort Categories into columns as evenly as possible
+						n = len(categories_to_arrange) # number of Categories left to sort
+						c = cards_per_column # capacity of each column
+						combos = [ [0] * (c+1) for _ in range(n+1) ]
+						fill_column(n, c)
+						check_inclusion(n, c)
+
+					# regardless of how the column was sorted we remove its categories from the list of ones to be arranged
 					for category in column_categories:
 						categories_to_arrange.remove(category)
-
-				# regardless of which column it is, we need to add its list to each_columns_list
+				# regardless of which column it is add it to the list
 				each_columns_list.append(column_categories)
+
 
 			# display each group of Categories in a separate column
 			for column in each_columns_list:
@@ -710,12 +731,6 @@ class Manager (tk.Frame):
 
 		# If we searched the decklist
 		if self.search_deck_cbox_var.get():
-			
-			
-			# self.UpdateDisplay(list(decklist_final_results)) # this is important because it crunches the numbers for the results
-			
-
-			# here we can make a new tab in the decklist Notebook and put the results there, sorted only by CMC
 			results_frame = tk.Frame(self.decklist_notebook)
 			self.decklist_notebook.add(results_frame, text="Search Results")
 			self.decklist_notebook.select(results_frame)
@@ -724,11 +739,7 @@ class Manager (tk.Frame):
 			for card in sorted_cards:
 				self.SetupCardDisplay(card, results_frame)
 
-
-			# make the button that removes this tab
 			tk.Button(results_frame, text="Remove this tab", command=self.RemoveSearchResultsTab).pack(anchor='ne', padx=3,pady=3)
-
-
 			print ("Manager.Search: display updated")
 
 		# If we searched the database
