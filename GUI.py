@@ -432,29 +432,32 @@ class Manager (tk.Frame):
 			cmc_canvas.create_text(text_x, y0, anchor=tk.S, text=str(y), justify='center') # label for bar
 
 
-	# Function to create, setup, and pack the outline of the Color Distribution Frame
+	# Function to create, setup, and pack the Color Distribution Frame
 	def SetupColorDistribution(self):
 		color_dist_frame = tk.LabelFrame(self.deckstats_column, text="Color Distribution", padx=3, pady=3)
 		color_dist_frame.pack(fill='both', expand=True)
 		
-		cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
-		land_cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32)
+		cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32) # canvas for bar representation of color distribution of spells
+		land_cd_canvas = tk.Canvas(color_dist_frame, width=250, height=32) # canvas for bar representation of mana production from lands
 
-		x1_spells = 5
-		x1_lands = 5
-		y1 = 2
-		y2 = 30
 
 		col_str_spells = ""
 		col_str_lands = ""
 		cdict = {'W' : "White", 'U' : "Blue", "B" : "Black", "R" : "Red", "G" : "Green", "C" : "Colorless"}
-		rect_cdict = {'W' : "#fffee0",
+		# coordinates for drawing the colored bars
+		x1_spells = 5
+		x1_lands = 5
+		y1 = 2
+		y2 = 30
+		# dict that stores the hex value of the color for the bar representing each color of mana
+		rect_cdict = {'W' : "#fffee0", 
 					  'U' : "#3679ff", 
 					  "B" : "#180420",
 					  "R" : "#ff1919", 
 					  "G" : "#0b9d1a", 
 					  "C" : "#b3b3b3",
 					  }
+
 		count_spells = 0
 		count_lands = 0
 		for color in self.deck.color_dist:
@@ -522,7 +525,7 @@ class Manager (tk.Frame):
 	def NewDeck(self):
 		self.deck = Deck()
 		self.deck_filepath = None
-		print (f"NewDeck: self.deck_filepath set to {self.deck_filepath}")
+		self.UpdateDeckTitle("Untitled Deck")
 		self.UpdateDisplay()
 
 
@@ -564,14 +567,14 @@ class Manager (tk.Frame):
 	def ImportDeck(self, filename=None):
 		if filename	is None:
 			filename = tk.filedialog.askopenfilename(title="Choose file to import", defaultextension='txt')
-		# def fun():
-		
 		# create a Deck from the filepath and assign to the GUI's self.deck
 		self.deck = Deck(filepath=filename, database=self.database)
-		# upadte display teo show the deck
+		# upadte display to show the deck
 		self.UpdateDeckTitle(filename[ filename.rfind("/")+1 : filename.rfind(".") ])
 		self.UpdateDisplay()
 
+
+	# Updates the title of the Deck, displayed at the top of the window
 	def UpdateDeckTitle(self, name_str):
 		self.deck_name_var.set(name_str)
 
@@ -592,9 +595,6 @@ class Manager (tk.Frame):
 		with open (filename, 'wb') as out_file:
 			pickle.dump(self.deck, out_file)
 
-		# with open(filename, 'w') as out_file:
-		# 	# out_file.write(self.deck.to_string())
-		# 	out_file.write(str(self.deck))
 		
 		print (f"GUI.SaveDeck: Deck saved to {filename}!")
 
@@ -606,14 +606,15 @@ class Manager (tk.Frame):
 			filename = tk.filedialog.asksaveasfilename(title="Choose file name to save as", defaultextension="txt")
 		# write the Deck to the file
 		with open (filename, 'w') as out_file:
-			out_file.write(str(self.deck)) 
+			out_file.write(str(self.deck))
 
 		print (f"GUI.ExportDeck: Deck exported to {filename}!")
 
 
-
+	# Called from the button in the Edit menu
+	# Sets the deck stats columns to show stats of the whole decklist, 
+	# Useful after crunching the numbers of search results 
 	def ResetDeckStatsDisplay(self):
-		print ("Manager.ResetDeckStatsDisplay: Resetting the deck stats display...")
 		self.deck.CrunchNumbers()
 
 		for widget in self.deckstats_column.winfo_children():
@@ -622,9 +623,10 @@ class Manager (tk.Frame):
 		self.SetupCMCGraph()
 		self.SetupColorDistribution()
 		self.SetupTypeDistributionFrame()
-		print ("Manager.ResetDeckStatsDisplay: Deck stats display reset.")
 
-
+	# Called from the button in the Edit menu
+	# Creates the default Sorts in the Deck
+	# Useful for updating an old Deck file that doesn't have all the Sorts
 	def MakeDefaultSorts(self):
 		print ("Manager.MakeDefaultSorts: Making the default sorts for current deck...")
 		self.deck.MakeDefaultSorts()

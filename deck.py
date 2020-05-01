@@ -50,6 +50,12 @@ class Deck:
 				return # we're done here, no need to check other types
 
 	def SortCardByColors(self, card):
+		if 'Land' in card.type_line: # if it's a Land
+			if 'Land' not in self.sorts['Color']: # set these aside on their own
+				self.sorts['Color']['Land'] = Category('Land') # they shouldn't be with artifacts and stuff
+			self.sorts['Color']['Land'].add(card)
+			return # no need to check colors
+
 		colors = set(card.colors)
 		if hasattr(card, 'other_half'): # if card has two spells on it
 			colors |= set(card.other_half.colors) # include the other half's colors
@@ -72,7 +78,7 @@ class Deck:
 					return # we're done here, no need to check other colors
 
 	def SortCardByCMC(self, card):
-		print (f"Deck.SortCardByCMC: looking at {card.name}")
+		print (f"Deck.SortCardByCMC: looking at {card.name} It's CMC: {card.cmc}")
 		cat_name = "Land / Nonspells" if card.cmc == -1 else str(card.cmc)
 		print (f"Deck.SortCardByCMC: {card.name}'s cat_name: {cat_name}")
 		if cat_name not in self.sorts['Converted Mana Cost']:
