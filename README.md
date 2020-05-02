@@ -1,4 +1,5 @@
 # MtGDeckbuilderAssistant
-Python application to help with building decks in Magic: the Gathering
+Tkinter and Python application to help with building decks in Magic: the Gathering
 
-Load a deck from file or build one from scratch by searching a database of all cards and adding them with a button. GUI will show a breakdown of the current decklist's CMC curve, and type and color distribution. There are options to filter cards by all their attributes. Only filtered cards will be displayed in list and in the analysis. 
+GUI lets you easily build and analyze a deck of Magic the Gathering cards. Graphs and text show an analysis of the deck's statistics like type and color distribution. The decklist display sorts cards by their properties and shows the full card's image in a tooltip. 
+Users can add cards to the deck with the card database search and quick set card quantity button or import a deck from a text file with just the cards' names and their quantities. Decks and all their properties including card images and any custom sorts can be saved to and loaded from a file. 
