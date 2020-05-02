@@ -27,7 +27,12 @@ class Card:
 		if 'convertedManaCost' in card_data:
 			self.cmc = int(card_data['convertedManaCost'])
 		else:
-			self.cmc = -1 # this way it still has a numerical value for sorting stuff
+			# some cards like Memnite have have a {0} manacost and for some reason no cmc property in db, so we'll check for that
+			if 'manaCost' in card_data:
+				print (f"{self.name} has no convertedManaCost but is a spell. Setting cmc to 0.")
+				self.cmc = 0
+			else:
+				self.cmc = -1 # this way it still has a numerical value for sorting stuff
 		if "names" in card_data:
 			self.names = card_data["names"]
 			self.layout = card_data["layout"]

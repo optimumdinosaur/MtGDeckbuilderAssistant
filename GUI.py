@@ -338,7 +338,7 @@ class Manager (tk.Frame):
  	# Creates the frame and junk to display one Card in the Decklist frame
 	def SetupCardDisplay(self, card, parent_frame):
 		card_frame = tk.Frame(master = parent_frame)
-		card_label = tk.Label(master = card_frame, text=f"{card.name} - {card.mana_cost}")
+		card_label = tk.Label(master = card_frame, text=f"{card.name}")
 		card_label.grid(row=0, column=1)
 		
 		# Create a tooltip that's shown when cursor is over the Label
